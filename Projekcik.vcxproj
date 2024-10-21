@@ -76,13 +76,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>"C:\Users\Dell-\Downloads\bibliotekicpp\raylib-5.0_win64_msvc16"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>"C:\Users\Dell-\Downloads\bibliotekicpp\raylib-5.0_win64_msvc16\include"</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>"C:\Users\Dell-\Downloads\bibliotekicpp\raylib-5.0_win64_msvc16\lib"</AdditionalLibraryDirectories>
-      <AdditionalDependencies>.lib;</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\Dell-\Downloads\bibliotekicpp\raylib-5.0_win64_msvc16\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>raylib.lib;winmm.lib;gdi32.lib;user32.lib;shell32.lib;</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -107,13 +107,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>"C:\Users\Dell-\Downloads\bibliotekicpp\raylib-5.0_win64_msvc16"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>"C:\Users\Dell-\Downloads\bibliotekicpp\raylib-5.0_win64_msvc16\include"</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>"C:\Users\Dell-\Downloads\bibliotekicpp\raylib-5.0_win64_msvc16\lib"</AdditionalLibraryDirectories>
-      <AdditionalDependencies>.lib;</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\Dell-\Downloads\bibliotekicpp\raylib-5.0_win64_msvc16\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>raylib.lib;winmm.lib;gdi32.lib;user32.lib;shell32.lib;</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -135,7 +135,21 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="packages\libiconv.lib.1.16.0.6\build\native\libiconv.lib.targets" Condition="Exists('packages\libiconv.lib.1.16.0.6\build\native\libiconv.lib.targets')" />
+    <Import Project="packages\libscodecvt.lib.3.0.0.4\build\native\libscodecvt.lib.targets" Condition="Exists('packages\libscodecvt.lib.3.0.0.4\build\native\libscodecvt.lib.targets')" />
+    <Import Project="packages\extios.lib.1.0.1.0\build\native\extios.lib.targets" Condition="Exists('packages\extios.lib.1.0.1.0\build\native\extios.lib.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>Ten projekt zawiera odwołania do pakietów NuGet, których nie ma na tym komputerze. Użyj przywracania pakietów NuGet, aby je pobrać. Aby uzyskać więcej informacji, zobacz http://go.microsoft.com/fwlink/?LinkID=322105. Brakujący plik: {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\libiconv.lib.1.16.0.6\build\native\libiconv.lib.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\libiconv.lib.1.16.0.6\build\native\libiconv.lib.targets'))" />
+    <Error Condition="!Exists('packages\libscodecvt.lib.3.0.0.4\build\native\libscodecvt.lib.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\libscodecvt.lib.3.0.0.4\build\native\libscodecvt.lib.targets'))" />
+    <Error Condition="!Exists('packages\extios.lib.1.0.1.0\build\native\extios.lib.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\extios.lib.1.0.1.0\build\native\extios.lib.targets'))" />
+  </Target>
 </Project>
