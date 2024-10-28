@@ -51,48 +51,54 @@ void rysujSzachownice()
 void rysujFigure(char figura, int x, int y)
 {
     string symbol;
+    Color kolor = BLACK;
+
     switch (figura)
     {
-    case 'P': symbol = "P"; break; // Pion
-    case 'R': symbol = "R"; break; // Wie¿a
-    case 'N': symbol = "N"; break; // Skoczek
-    case 'B': symbol = "B"; break; // Goniec
-    case 'Q': symbol = "Q"; break; // Hetman
-    case 'K': symbol = "K"; break; // Król
-    default: return;
+    case 'P': symbol = "P"; kolor = WHITE; break;  // Bia³y pion
+    case 'R': symbol = "R"; kolor = WHITE; break;  // Bia³a wie¿a
+    case 'N': symbol = "N"; kolor = WHITE; break;  // Bia³y skoczek
+    case 'B': symbol = "B"; kolor = WHITE; break;  // Bia³y goniec
+    case 'Q': symbol = "Q"; kolor = WHITE; break;  // Bia³y hetman
+    case 'K': symbol = "K"; kolor = WHITE; break;  // Bia³y król
+    case 'p': symbol = "P"; kolor = BLACK; break;  // Czarny pion
+    case 'r': symbol = "R"; kolor = BLACK; break;  // Czarna wie¿a
+    case 'n': symbol = "N"; kolor = BLACK; break;  // Czarny skoczek
+    case 'b': symbol = "B"; kolor = BLACK; break;  // Czarny goniec
+    case 'q': symbol = "Q"; kolor = BLACK; break;  // Czarny hetman
+    case 'k': symbol = "K"; kolor = BLACK; break;  // Czarny król
+    default: return;  // Ignoruj puste pola
     }
 
-    // Rysowanie symbolu figury na œrodku pola
     int posX = x * ROZMIAR_POLA + ROZMIAR_POLA / 2 - 10;
     int posY = y * ROZMIAR_POLA + ROZMIAR_POLA / 2 - 10;
-    DrawText(symbol.c_str(), posX, posY, 20, BLACK);
-}// Funkcja do parsowania PGN i rysowania szachownicy na jej podstawie
-void narysujSzachownice(const char* pgn)
+    DrawText(symbol.c_str(), posX, posY, 20, kolor);
+}
+
+// Funkcja do przetwarzania FEN i rysowania szachownicy na jej podstawie
+void narysujSzachowniceFEN(const string& fen)
 {
-    // Rysowanie planszy
-    rysujSzachownice();
+    rysujSzachownice();  // Rysowanie pustej szachownicy
 
-    // Ustawienie figur w pozycji pocz¹tkowej (tutaj mo¿na rozszerzyæ o analizê PGN)
-    vector<string> pozycjaStartowa = {
-        "RNBQKBNR",
-        "PPPPPPPP",
-        "        ",
-        "        ",
-        "        ",
-        "        ",
-        "pppppppp",
-        "rnbqkbnr"
-    };
+    int x = 0, y = 0;
 
-    for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++)
+    for (char c : fen)
     {
-        for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++)
+        if (c == ' ')
+            break;  // Koniec pozycji, ignorujemy czêœæ FEN po pierwszej spacji
+        if (c == '/')
         {
-            char figura = pozycjaStartowa[y][x];
-            if (figura != ' ')
-            {
-                rysujFigure(figura, x, y);
-            }
+            y++;   // Przechodzimy do kolejnego rzêdu
+            x = 0; // Resetujemy kolumnê
+        }
+        else if (isdigit(c))
+        {
+            x += c - '0'; // Przesuwamy kolumnê o liczbê pustych pól
+        }
+        else
+        {
+            rysujFigure(c, x, y); // Rysujemy figurê w odpowiedniej pozycji
+            x++;
         }
     }
 }
@@ -201,46 +207,21 @@ void narysuj_szachownice()
 
 }
 // Funkcje poziomów
+// U¿ycie funkcji `narysujSzachowniceFEN` w poziomie 1 zamiast `rysujSzachownice`
 void poziom1()
 {
     cout << "Wybrano poziom 1" << endl;
+    string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";  // Domyœlny FEN pozycji startowej
 
     bool poziomAktywny = true;
 
-    while (poziomAktywny && !WindowShouldClose())  // Pêtla, która utrzymuje poziom aktywny
+    while (poziomAktywny && !WindowShouldClose())
     {
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        // Rysowanie planszy
-        rysujSzachownice();
+        narysujSzachowniceFEN(fen);  // Rysowanie pozycji z FEN
 
-        // Ustawienie figur w pozycji pocz¹tkowej
-        vector<string> pozycjaStartowa = {
-            "RNBQKBNR",  // 1. linia bia³ych
-            "PPPPPPPP",  // 2. linia bia³ych
-            "        ",  // Puste linie
-            "        ",
-            "        ",
-            "        ",
-            "pppppppp",  // 7. linia czarnych
-            "rnbqkbnr"   // 8. linia czarnych
-        };
-
-        // Rysowanie figur w pocz¹tkowej pozycji
-        for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++)
-        {
-            for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++)
-            {
-                char figura = pozycjaStartowa[y][x];
-                if (figura != ' ')
-                {
-                    rysujFigure(figura, x, y);
-                }
-            }
-        }
-
-        // Przycisk "Wróæ", który pozwala na wyjœcie z poziomu
         if (rysujPrzycisk("Wroc", 50, 50, 150, 50, DARKGRAY, GRAY))
         {
             poziomAktywny = false;
