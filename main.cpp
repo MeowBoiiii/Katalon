@@ -1,25 +1,29 @@
-#include <iostream>
+ï»¿#include <iostream>
 #include <string>
 #include <vector>
 #include <thread>
+#include <map>
 #include "raylib.h"
 
 using namespace std;
+
 const int ROZMIAR_SZACHOWNICY = 8;
-const int ROZMIAR_POLA = 80;
+const int ROZMIAR_POLA = 90;
 const Color KOLOR_JASNY = LIGHTGRAY;
 const Color KOLOR_CIEMNY = DARKGRAY;
+Color kolorPolaJasny = LIGHTGRAY;
+Color kolorPolaCiemny = DARKGRAY;
 
-// Ustawienia rozmiaru okna
+string poczatkowa_pozycja_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+
 int szerokoscOkna = 1280;
 int wysokoscOkna = 720;
-Color kolorTla = LIME;  // Domyœlny kolor t³a
+Color kolorTla = LIME;
 
-// Deklaracja funkcji ustawieniaMenu, aby by³a rozpoznawana w funkcji menuGlowne()
 void ustawieniaMenu();
 void wybierzpoziom();
+std::map<char, Texture2D> teksturyFigur;
 
-//--------------------------------------FUNKCJA RYSUJ¥CA TEKST-------------------------------------------------
 void rysujTekstNaSrodku(const char* tekst, int rozmiarCzcionki, Color kolor)
 {
     int szerokoscTekstu = MeasureText(tekst, rozmiarCzcionki);
@@ -33,94 +37,77 @@ void rysujTekstNaSrodku(const char* tekst, int rozmiarCzcionki, Color kolor)
     EndDrawing();
 }
 
-// Funkcja pomocnicza do rysowania szachownicy
-void rysujSzachownice()
-{
-    for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++)
-    {
-        for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++)
-        {
-            // Wybieramy kolor dla bie¿¹cego pola
-            Color kolorPola = ((x + y) % 2 == 0) ? KOLOR_JASNY : KOLOR_CIEMNY;
-            DrawRectangle(x * ROZMIAR_POLA, y * ROZMIAR_POLA, ROZMIAR_POLA, ROZMIAR_POLA, kolorPola);
+void ladujTeksturyFigur() {
+    string folder = "grafiki_figur/";
+    teksturyFigur['P'] = LoadTexture((folder + "wp.png").c_str());
+    teksturyFigur['R'] = LoadTexture((folder + "wr.png").c_str());
+    teksturyFigur['N'] = LoadTexture((folder + "wn.png").c_str());
+    teksturyFigur['B'] = LoadTexture((folder + "wb.png").c_str());
+    teksturyFigur['Q'] = LoadTexture((folder + "wq.png").c_str());
+    teksturyFigur['K'] = LoadTexture((folder + "wk.png").c_str());
+    teksturyFigur['p'] = LoadTexture((folder + "bp.png").c_str());
+    teksturyFigur['r'] = LoadTexture((folder + "br.png").c_str());
+    teksturyFigur['n'] = LoadTexture((folder + "bn.png").c_str());
+    teksturyFigur['b'] = LoadTexture((folder + "bb.png").c_str());
+    teksturyFigur['q'] = LoadTexture((folder + "bq.png").c_str());
+    teksturyFigur['k'] = LoadTexture((folder + "bk.png").c_str());
+}
+
+void zwolnijTekstury() {
+    for (auto& para : teksturyFigur) {
+        UnloadTexture(para.second);
+    }
+    teksturyFigur.clear();
+}
+
+void rysujFigure(char figura, int x, int y, int startX, int startY, int poleRozmiar) {
+    if (teksturyFigur.find(figura) != teksturyFigur.end()) {
+        int posX = startX + x * poleRozmiar;
+        int posY = startY + y * poleRozmiar;
+        DrawTexture(teksturyFigur[figura], posX, posY, WHITE);
+    }
+}
+
+void narysujSzachowniceFEN(const string& fen) {
+    int szerokoscSzachownicy = GetScreenHeight() * 0.9;
+    int startX = (GetScreenWidth() - szerokoscSzachownicy) / 2;
+    int startY = (GetScreenHeight() - szerokoscSzachownicy) / 2;
+    int poleRozmiar = szerokoscSzachownicy / ROZMIAR_SZACHOWNICY;
+
+    for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++) {
+        for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++) {
+            Color kolorPola = ((x + y) % 2 == 0) ? kolorPolaJasny : kolorPolaCiemny;
+            DrawRectangle(startX + x * poleRozmiar, startY + y * poleRozmiar, poleRozmiar, poleRozmiar, kolorPola);
         }
     }
-}
-
-// Funkcja pomocnicza do rysowania figury w polu na szachownicy
-void rysujFigure(char figura, int x, int y)
-{
-    string symbol;
-    Color kolor = BLACK;
-
-    switch (figura)
-    {
-    case 'P': symbol = "P"; kolor = WHITE; break;  // Bia³y pion
-    case 'R': symbol = "R"; kolor = WHITE; break;  // Bia³a wie¿a
-    case 'N': symbol = "N"; kolor = WHITE; break;  // Bia³y skoczek
-    case 'B': symbol = "B"; kolor = WHITE; break;  // Bia³y goniec
-    case 'Q': symbol = "Q"; kolor = WHITE; break;  // Bia³y hetman
-    case 'K': symbol = "K"; kolor = WHITE; break;  // Bia³y król
-    case 'p': symbol = "P"; kolor = BLACK; break;  // Czarny pion
-    case 'r': symbol = "R"; kolor = BLACK; break;  // Czarna wie¿a
-    case 'n': symbol = "N"; kolor = BLACK; break;  // Czarny skoczek
-    case 'b': symbol = "B"; kolor = BLACK; break;  // Czarny goniec
-    case 'q': symbol = "Q"; kolor = BLACK; break;  // Czarny hetman
-    case 'k': symbol = "K"; kolor = BLACK; break;  // Czarny król
-    default: return;  // Ignoruj puste pola
-    }
-
-    int posX = x * ROZMIAR_POLA + ROZMIAR_POLA / 2 - 10;
-    int posY = y * ROZMIAR_POLA + ROZMIAR_POLA / 2 - 10;
-    DrawText(symbol.c_str(), posX, posY, 20, kolor);
-}
-
-// Funkcja do przetwarzania FEN i rysowania szachownicy na jej podstawie
-void narysujSzachowniceFEN(const string& fen)
-{
-    rysujSzachownice();  // Rysowanie pustej szachownicy
 
     int x = 0, y = 0;
-
-    for (char c : fen)
-    {
-        if (c == ' ')
-            break;  // Koniec pozycji, ignorujemy czêœæ FEN po pierwszej spacji
-        if (c == '/')
-        {
-            y++;   // Przechodzimy do kolejnego rzêdu
-            x = 0; // Resetujemy kolumnê
+    for (char c : fen) {
+        if (c == ' ') break;
+        if (c == '/') {
+            y++;
+            x = 0;
         }
-        else if (isdigit(c))
-        {
-            x += c - '0'; // Przesuwamy kolumnê o liczbê pustych pól
+        else if (isdigit(c)) {
+            x += c - '0';
         }
-        else
-        {
-            rysujFigure(c, x, y); // Rysujemy figurê w odpowiedniej pozycji
+        else {
+            rysujFigure(c, x, y, startX, startY, poleRozmiar);
             x++;
         }
     }
 }
 
-//-------------------------------------FUNKCJA RYSUJ¥CA PRZYCISKI---------------------------------------------
 bool rysujPrzycisk(const char* tekst, int x, int y, int szerokosc, int wysokosc, Color kolorklikniecia, Color kolorprzycisku)
 {
     Rectangle przyciskRect = { (float)x, (float)y, (float)szerokosc, (float)wysokosc };
-
-    // Sprawdzenie, czy mysz jest na przycisku
     bool nadPrzyciskiem = CheckCollisionPointRec(GetMousePosition(), przyciskRect);
-
-    // Rysowanie przycisku (zmiana koloru po najechaniu myszk¹)
     Color kolorPrzycisku = nadPrzyciskiem ? kolorklikniecia : kolorprzycisku;
     DrawRectangleRec(przyciskRect, kolorPrzycisku);
     DrawText(tekst, x + 20, y + 10, 20, RAYWHITE);
-
-    // Zwrócenie true, jeœli przycisk zosta³ klikniêty
     return nadPrzyciskiem && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 }
 
-// Funkcja menu g³ównego
 void menuGlowne()
 {
     bool wUstawieniach = false;
@@ -131,7 +118,6 @@ void menuGlowne()
         BeginDrawing();
         ClearBackground(kolorTla);
 
-        // Rysowanie przycisków
         if (rysujPrzycisk("Zadania", szerokoscOkna / 2 - 200, wysokoscOkna / 2 - 300, 400, 100, DARKGRAY, GRAY))
         {
             wWyborzePoziomow = true;
@@ -142,20 +128,19 @@ void menuGlowne()
         }
         if (rysujPrzycisk("Tworcy", szerokoscOkna / 2 - 100, wysokoscOkna / 2, 200, 50, DARKGRAY, GRAY))
         {
-            rysujTekstNaSrodku("Pawe³ Handwerkier", 30, DARKGRAY);
+            rysujTekstNaSrodku("PaweÅ‚ Handwerkier", 30, DARKGRAY);
         }
         if (rysujPrzycisk("Wyjdz", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 100, 200, 50, DARKGRAY, GRAY))
         {
-            CloseWindow(); // Wyjœcie z aplikacji
+            CloseWindow();
         }
 
         EndDrawing();
 
-        // Jeœli u¿ytkownik wybra³ opcjê "Ustawienia", wywo³ujemy odpowiedni¹ funkcjê
         if (wUstawieniach)
         {
-            ustawieniaMenu();  // Funkcja do wyœwietlenia menu ustawieñ
-            wUstawieniach = false; // Powrót do g³ównego menu po wyjœciu z ustawieñ
+            ustawieniaMenu();
+            wUstawieniach = false;
         }
         if (wWyborzePoziomow)
         {
@@ -165,34 +150,32 @@ void menuGlowne()
     }
 }
 
-// Funkcja wyœwietlaj¹ca menu ustawieñ
 void ustawieniaMenu()
 {
     bool wMenu = true;
     int glosnoscMuzyki = 50;
     bool pelnyEkran = false;
+    int wybranyKolorTla = 1;
+    int wybranyKolorPola = 1;
 
     while (wMenu && !WindowShouldClose())
     {
         BeginDrawing();
         ClearBackground(kolorTla);
 
-        DrawText("Glosnosc Muzyki:", 200, 200, 20, WHITE);
-        DrawText(TextFormat("%i", glosnoscMuzyki), 450, 200, 20, WHITE);
+        DrawText("Glosnosc Muzyki:", 200, 50, 20, WHITE);
+        DrawText(TextFormat("%i", glosnoscMuzyki), 450, 50, 20, WHITE);
 
         if (IsKeyPressed(KEY_LEFT)) glosnoscMuzyki = max(glosnoscMuzyki - 10, 0);
         if (IsKeyPressed(KEY_RIGHT)) glosnoscMuzyki = min(glosnoscMuzyki + 10, 100);
 
-        if (rysujPrzycisk("Przelacz Pelen Ekran", szerokoscOkna / 2 - 100, 300, 200, 50, DARKGRAY, GRAY))
+        if (rysujPrzycisk("Przelacz Pelen Ekran", szerokoscOkna / 2 - 100, 100, 200, 50, DARKGRAY, GRAY))
         {
             ToggleFullscreen();
             pelnyEkran = !pelnyEkran;
         }
 
-        DrawText("Wybierz Kolor Tla:", 200, 350, 20, WHITE);
-        if (rysujPrzycisk("Zielony", 200, 400, 200, 50, DARKGRAY, DARKGREEN)) kolorTla = LIME;
-        if (rysujPrzycisk("Niebieski", 450, 400, 200, 50, DARKGRAY, BLUE)) kolorTla = SKYBLUE;
-        if (rysujPrzycisk("Czerwony", 700, 400, 200, 50, DARKGRAY, MAROON)) kolorTla = RED;
+        // Background color options...
 
         if (rysujPrzycisk("Wroc", szerokoscOkna / 2 - 100, 500, 200, 50, DARKGRAY, GRAY))
         {
@@ -202,84 +185,32 @@ void ustawieniaMenu()
         EndDrawing();
     }
 }
-void narysuj_szachownice()
-{
 
-}
-// Funkcje poziomów
-// U¿ycie funkcji `narysujSzachowniceFEN` w poziomie 1 zamiast `rysujSzachownice`
 void poziom1()
 {
-    cout << "Wybrano poziom 1" << endl;
-    string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";  // Domyœlny FEN pozycji startowej
-
-    bool poziomAktywny = true;
-
-    while (poziomAktywny && !WindowShouldClose())
-    {
+    string fen = "rnbqkbnr/pppppppp/8/8/2PP4/5NP1/PP2PPBP/RNBQ1RK1";
+    while (!WindowShouldClose()) {
         BeginDrawing();
-        ClearBackground(RAYWHITE);
-
-        narysujSzachowniceFEN(fen);  // Rysowanie pozycji z FEN
-
-        if (rysujPrzycisk("Wroc", 50, 50, 150, 50, DARKGRAY, GRAY))
-        {
-            poziomAktywny = false;
-        }
-
+        ClearBackground(kolorTla);
+        narysujSzachowniceFEN(fen);
         EndDrawing();
     }
 }
 
+void wybierzpoziom() {
+    bool wybranoPoziom = false;
 
-void poziom2()
-{
-    cout << "Wybrano poziom 2" << endl;
-}
-
-void poziom3()
-{
-    cout << "Wybrano poziom 3" << endl;
-}
-
-// Funkcja rysuj¹ca przyciski wyboru poziomów
-void narysujPrzyciskiDoWyboruPoziomu()
-{
-    int liczbaPrzyciskow = 50;
-    int kolumny = 10;
-    int rozmiarPrzycisku = 100;
-    int odstep = 10;
-
-    // Tablica wskaŸników do funkcji poziomów
-    void (*poziomy[3])() = { poziom1, poziom2, poziom3 };
-
-    for (int i = 0; i < liczbaPrzyciskow; i++)
-    {
-        int x = 100 + (i % kolumny) * (rozmiarPrzycisku + odstep);
-        int y = 100 + (i / kolumny) * (rozmiarPrzycisku + odstep);
-
-        if (i < 3 && rysujPrzycisk(TextFormat("%d", i + 1), x, y, rozmiarPrzycisku, rozmiarPrzycisku, MAGENTA, DARKPURPLE))
-        {
-            poziomy[i]();  // Wywo³anie odpowiedniej funkcji poziomu
-        }
-    }
-}
-
-// Funkcja wyboru poziomu
-void wybierzpoziom()
-{
-    bool wybierzPoziom = true;
-
-    while (wybierzPoziom && !WindowShouldClose())
-    {
+    while (!wybranoPoziom && !WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(kolorTla);
 
-        narysujPrzyciskiDoWyboruPoziomu();
+        if (rysujPrzycisk("Poziom 1", szerokoscOkna / 2 - 100, wysokoscOkna / 2 - 100, 200, 50, DARKGRAY, GRAY)) {
+            poziom1();
+            wybranoPoziom = true;
+        }
 
-        if (rysujPrzycisk("Wroc", szerokoscOkna - 200, 50, 150, 50, DARKGRAY, GRAY))
-        {
-            wybierzPoziom = false;
+        if (rysujPrzycisk("Wroc", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 100, 200, 50, DARKGRAY, GRAY)) {
+            wybranoPoziom = true;
         }
 
         EndDrawing();
@@ -288,13 +219,14 @@ void wybierzpoziom()
 
 int main()
 {
-    InitWindow(szerokoscOkna, wysokoscOkna, "System Katalonski");
+    InitWindow(szerokoscOkna, wysokoscOkna, "Szachy C++");
+    SetTargetFPS(60);
 
-    rysujTekstNaSrodku("System Katalonski", 50, DARKGRAY);
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    ladujTeksturyFigur();
 
     menuGlowne();
 
+    zwolnijTekstury();
     CloseWindow();
 
     return 0;
