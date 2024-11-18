@@ -58,6 +58,7 @@ void zwolnijTekstury() {
         UnloadTexture(para.second);
     }
     teksturyFigur.clear();
+
 }
 
 void rysujFigure(char figura, int x, int y, int startX, int startY, int poleRozmiar) {
@@ -120,6 +121,7 @@ void menuGlowne()
 {
     bool wUstawieniach = false;
     bool wWyborzePoziomow = false;
+    bool wTworcach = false;
 
     while (!WindowShouldClose())
     {
@@ -137,8 +139,10 @@ void menuGlowne()
         }
         if (rysujPrzycisk("Tworcy", szerokoscOkna / 2 - 100, wysokoscOkna / 2, 200, 50, DARKGRAY, GRAY))
         {
-            rysujTekstNaSrodku("Paweł Handwerkier", 30, DARKGRAY);
+            wTworcach = true;
         }
+
+
         if (rysujPrzycisk("Wyjdz", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 100, 200, 50, DARKGRAY, GRAY))
         {
             CloseWindow(); // Wyjście z aplikacji
@@ -156,6 +160,12 @@ void menuGlowne()
         {
             wybierzpoziom();
             wWyborzePoziomow = false;
+        }
+        if (wTworcach)
+        {
+            cout << "aa";
+            pokazTworcow();
+            wTworcach = false;
         }
     }
 }
@@ -279,6 +289,44 @@ void ustawieniaMenu()
         EndDrawing();
     }
 }
+void pokazTworcow()
+{
+    Texture2D pawelek = LoadTexture("tworcy/pawelek.png");
+    Texture2D kubus = LoadTexture("tworcy/kubus.png");
+    Texture2D olaf = LoadTexture("tworcy/olaf.png");
+
+    bool wEkranieTworcow = true;
+
+    while (wEkranieTworcow && !WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(kolorTla);
+
+        DrawText("Twórcy", szerokoscOkna / 2 - MeasureText("Twórcy", 40) / 2, 20, 40, WHITE);
+
+        // Rysowanie informacji o twórcach
+        int startX = szerokoscOkna / 2 - 300;
+        int startY = 100;
+        int odstęp = 200;
+
+        DrawTexture(pawelek, startX, startY, WHITE);
+        DrawText("Pawelek", startX + pawelek.width / 2 - MeasureText("Pawelek", 20) / 2, startY + pawelek.height + 10, 20, WHITE);
+
+        DrawTexture(kubus, startX + odstęp, startY, WHITE);
+        DrawText("Kubus", startX + odstęp + kubus.width / 2 - MeasureText("Kubus", 20) / 2, startY + kubus.height + 10, 20, WHITE);
+
+        DrawTexture(olaf, startX + 2 * odstęp, startY, WHITE);
+        DrawText("Olaf", startX + 2 * odstęp + olaf.width / 2 - MeasureText("Olaf", 20) / 2, startY + olaf.height + 10, 20, WHITE);
+
+        // Przycisk powrotu do menu głównego
+        if (rysujPrzycisk("Wroc", szerokoscOkna / 2 - 100, wysokoscOkna - 100, 200, 50, DARKGRAY, GRAY))
+        {
+            wEkranieTworcow = false;
+        }
+
+        EndDrawing();
+    }
+}
 
 
 void poziom1()
@@ -295,7 +343,7 @@ void poziom1()
         narysujSzachowniceFEN(fen);
 
         // Rysowanie przycisku „Powrót”
-        if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
+        if (rysujPrzycisk("Wroc", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
         {
             wPoziomie = false; // Wyjście z poziomu
         }
