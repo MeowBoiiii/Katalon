@@ -58,7 +58,6 @@ void zwolnijTekstury() {
         UnloadTexture(para.second);
     }
     teksturyFigur.clear();
-
 }
 
 void rysujFigure(char figura, int x, int y, int startX, int startY, int poleRozmiar) {
@@ -121,7 +120,6 @@ void menuGlowne()
 {
     bool wUstawieniach = false;
     bool wWyborzePoziomow = false;
-    bool wTworcach = false;
 
     while (!WindowShouldClose())
     {
@@ -139,10 +137,8 @@ void menuGlowne()
         }
         if (rysujPrzycisk("Tworcy", szerokoscOkna / 2 - 100, wysokoscOkna / 2, 200, 50, DARKGRAY, GRAY))
         {
-            wTworcach = true;
+            rysujTekstNaSrodku("Paweł Handwerkier", 30, DARKGRAY);
         }
-
-
         if (rysujPrzycisk("Wyjdz", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 100, 200, 50, DARKGRAY, GRAY))
         {
             CloseWindow(); // Wyjście z aplikacji
@@ -160,12 +156,6 @@ void menuGlowne()
         {
             wybierzpoziom();
             wWyborzePoziomow = false;
-        }
-        if (wTworcach)
-        {
-            cout << "aa";
-            pokazTworcow();
-            wTworcach = false;
         }
     }
 }
@@ -289,49 +279,11 @@ void ustawieniaMenu()
         EndDrawing();
     }
 }
-void pokazTworcow()
-{
-    Texture2D pawelek = LoadTexture("tworcy/pawelek.png");
-    Texture2D kubus = LoadTexture("tworcy/kubus.png");
-    Texture2D olaf = LoadTexture("tworcy/olaf.png");
-
-    bool wEkranieTworcow = true;
-
-    while (wEkranieTworcow && !WindowShouldClose())
-    {
-        BeginDrawing();
-        ClearBackground(kolorTla);
-
-        DrawText("Twórcy", szerokoscOkna / 2 - MeasureText("Twórcy", 40) / 2, 20, 40, WHITE);
-
-        // Rysowanie informacji o twórcach
-        int startX = szerokoscOkna / 2 - 300;
-        int startY = 100;
-        int odstęp = 200;
-
-        DrawTexture(pawelek, startX, startY, WHITE);
-        DrawText("Pawelek", startX + pawelek.width / 2 - MeasureText("Pawelek", 20) / 2, startY + pawelek.height + 10, 20, WHITE);
-
-        DrawTexture(kubus, startX + odstęp, startY, WHITE);
-        DrawText("Kubus", startX + odstęp + kubus.width / 2 - MeasureText("Kubus", 20) / 2, startY + kubus.height + 10, 20, WHITE);
-
-        DrawTexture(olaf, startX + 2 * odstęp, startY, WHITE);
-        DrawText("Olaf", startX + 2 * odstęp + olaf.width / 2 - MeasureText("Olaf", 20) / 2, startY + olaf.height + 10, 20, WHITE);
-
-        // Przycisk powrotu do menu głównego
-        if (rysujPrzycisk("Wroc", szerokoscOkna / 2 - 100, wysokoscOkna - 100, 200, 50, DARKGRAY, GRAY))
-        {
-            wEkranieTworcow = false;
-        }
-
-        EndDrawing();
-    }
-}
 
 
 void poziom1()
 {
-    string fen = "rnbqkbnr/pppppppp/8/8/2PP4/5NP1/PP2PPBP/RNBQ1RK1";
+    string fen = "r1b2rk1/pppp1ppp/2n1pn2/8/3P4/1NQ2NP1/qP2PPBP/2R1K2R w K";
     bool wPoziomie = true;
 
     while (wPoziomie && !WindowShouldClose())
@@ -339,11 +291,29 @@ void poziom1()
         BeginDrawing();
         ClearBackground(kolorTla);
 
-        // Rysowanie szachownicy
-        narysujSzachowniceFEN(fen);
+        int margines = 20;
+        int szerokoscPola = 200;
+
+        // Rysowanie przezroczystego pola na informacje
+        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines*2), ColorAlpha(DARKGRAY, 0.8f)); // Półprzezroczyste tło
+
+        // Dodanie przyjemniejszego wyglądu – obramowanie
+        DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight()-(margines*2), WHITE);
+
+        // Nagłówek i informacje
+        DrawText("Zadanie 1", margines + 10, 10+margines, 20, WHITE);
+        DrawText("Czarne zbily pionla", margines + 10, 80 + margines, 16, WHITE);
+        DrawText("na skrzydle hetmanskim,", margines + 10, 100 + margines, 16, WHITE);
+        DrawText("jednak nie maja jeszcze", margines + 10, 120 + margines, 16, WHITE);
+        DrawText("wyprowadzonych figur", margines + 10, 140 + margines, 16, WHITE);
+        DrawText("-Znajdz najlepsze", margines + 10, 170 + margines, 16, WHITE);
+        DrawText("posuniecie dla bialego-", margines + 10, 190 + margines, 16, WHITE);
+
+        // Rysowanie szachownicy, przesuniętej w prawo o szerokość pola na tekst + margines
+        narysujSzachowniceFEN(fen); // Dodanie odstępu między polem a szachownicą
 
         // Rysowanie przycisku „Powrót”
-        if (rysujPrzycisk("Wroc", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
+        if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
         {
             wPoziomie = false; // Wyjście z poziomu
         }
@@ -358,13 +328,96 @@ void poziom1()
     }
 }
 
+
+
 void poziom2()
 {
-    cout << "Wybrano poziom 2" << endl;
+    string fen = "r4rk1/2pn1ppp/p1b1pq2/1p6/P1pP4/2P2NP1/Q3PPBP/R2R2K1 w";
+    bool wPoziomie = true;
+
+    while (wPoziomie && !WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(kolorTla);
+
+        int margines = 20;
+        int szerokoscPola = 200;
+
+        // Rysowanie przezroczystego pola na informacje
+        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f)); // Półprzezroczyste tło
+
+        // Dodanie przyjemniejszego wyglądu – obramowanie
+        DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), WHITE);
+
+        // Nagłówek i informacje
+        DrawText("Zadanie 2", margines + 10, 10 + margines, 20, WHITE);
+        DrawText("Otwarta przekatna a8-h1", margines + 10, 80 + margines, 16, WHITE);
+        DrawText("-Znajdz najlepsze", margines + 10, 110 + margines, 16, WHITE);
+        DrawText("posuniecie dla bialego-", margines + 10, 130 + margines, 16, WHITE);
+
+        narysujSzachowniceFEN(fen);
+
+        // Rysowanie przycisku „Powrót”
+        if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
+        {
+            wPoziomie = false; // Wyjście z poziomu
+        }
+
+        // Rysowanie przycisku „Ustawienia”
+        if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY))
+        {
+            ustawieniaMenu(); // Przejście do ustawień
+        }
+
+        EndDrawing();
+    }
 }
 void poziom3()
 {
-    cout << "Wybrano poziom 3" << endl;
+    string fen = "r4rk1/ppn3pp/2p5/3pP3/6bq/2NB2R1/PP1Q1P1P/2KR4 w";
+    bool wPoziomie = true;
+
+    while (wPoziomie && !WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(kolorTla);
+
+        int margines = 20;
+        int szerokoscPola = 200;
+
+        // Rysowanie przezroczystego pola na informacje
+        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f)); // Półprzezroczyste tło
+
+        // Dodanie przyjemniejszego wyglądu – obramowanie
+        DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), WHITE);
+
+        // Nagłówek i informacje
+        DrawText("Zadanie 3", margines + 10, 10 + margines, 20, WHITE);
+        DrawText("Biale tutaj wyjatkowo", margines + 10, 80 + margines, 16, WHITE);
+        DrawText("zdecydowaly sie na 0-0-0,", margines + 10, 100 + margines, 16, WHITE);
+        DrawText("czyli dluga roszade", margines + 10, 120 + margines, 16, WHITE);
+        DrawText("pozwala im to na atak", margines + 10, 140 + margines, 16, WHITE);
+        DrawText("na skrzydle krolewskim", margines + 10, 160 + margines, 16, WHITE);
+        DrawText("-Znajdz najlepsze", margines + 10, 190 + margines, 16, WHITE);
+        DrawText("posuniecie dla bialego-", margines + 10, 210 + margines, 16, WHITE);
+
+        // Rysowanie szachownicy, przesuniętej w prawo o szerokość pola na tekst + margines
+        narysujSzachowniceFEN(fen); // Dodanie odstępu między polem a szachownicą
+
+        // Rysowanie przycisku „Powrót”
+        if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
+        {
+            wPoziomie = false; // Wyjście z poziomu
+        }
+
+        // Rysowanie przycisku „Ustawienia”
+        if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY))
+        {
+            ustawieniaMenu(); // Przejście do ustawień
+        }
+
+        EndDrawing();
+    }
 }
 
 void wybierzpoziom()
@@ -378,8 +431,8 @@ void wybierzpoziom()
 
         DrawText("Wybierz poziom:", szerokoscOkna / 2 - 100, 50, 30, WHITE);
 
-        int liczbaPrzyciskow = 3;  // Liczba dostępnych poziomów (można rozszerzyć)
-        int kolumny = 3;          // Liczba przycisków w rzędzie
+        int liczbaPrzyciskow = 5;  // Liczba dostępnych poziomów (można rozszerzyć)
+        int kolumny = 5;          // Liczba przycisków w rzędzie
         int rozmiarPrzycisku = 100;
         int odstep = 20;
 
