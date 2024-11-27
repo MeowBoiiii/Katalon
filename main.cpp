@@ -1,4 +1,6 @@
 ﻿#include <iostream>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <thread>
@@ -23,6 +25,51 @@ Color kolorTla = LIME;
 void ustawieniaMenu();
 void wybierzpoziom();
 std::map<char, Texture2D> teksturyFigur;
+
+struct Zadanie
+{
+    std::string fen;
+    std::string tytul;
+    std::vector<std::string> opis;
+};
+
+// wczytywanie danych z pliku tekstowego
+Zadanie wczytajZadanie(const std::string& sciezkaPliku)
+{
+    Zadanie zadanie;
+    std::ifstream plik(sciezkaPliku);
+
+    if (!plik.is_open())
+    {
+        cerr << "Nie mozna otworzyc pliku: " << sciezkaPliku << endl;
+        return zadanie;
+    }
+
+    std::string linia;
+    bool pierwszaLinia = true;
+    bool tytulUstawiony = false;
+
+    while (std::getline(plik, linia))
+    {
+        if (pierwszaLinia)
+        {
+            zadanie.fen = linia; // Pierwsza linia to FEN
+            pierwszaLinia = false;
+        }
+        else if (!tytulUstawiony && !linia.empty())
+        {
+            zadanie.tytul = linia; // Następna niepusta linia to tytuł
+            tytulUstawiony = true;
+        }
+        else
+        {
+            zadanie.opis.push_back(linia); // Pozostałe linie to opis
+        }
+    }
+
+    plik.close();
+    return zadanie;
+}
 
 void rysujTekstNaSrodku(const char* tekst, int rozmiarCzcionki, Color kolor)
 {
@@ -280,10 +327,17 @@ void ustawieniaMenu()
     }
 }
 
-
+// Funkcja poziom1
 void poziom1()
 {
-    string fen = "r1b2rk1/pppp1ppp/2n1pn2/8/3P4/1NQ2NP1/qP2PPBP/2R1K2R w K";
+    // Wczytaj zadanie z pliku
+    Zadanie zadanie = wczytajZadanie("zadania/zadanie 1.txt");
+    if (zadanie.fen.empty())
+    {
+        std::cerr << "Nie udalo sie wczytac zadania!" << std::endl;
+        return;
+    }
+
     bool wPoziomie = true;
 
     while (wPoziomie && !WindowShouldClose())
@@ -295,33 +349,32 @@ void poziom1()
         int szerokoscPola = 200;
 
         // Rysowanie przezroczystego pola na informacje
-        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines*2), ColorAlpha(DARKGRAY, 0.8f)); // Półprzezroczyste tło
+        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f));
+        DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), WHITE);
 
-        // Dodanie przyjemniejszego wyglądu – obramowanie
-        DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight()-(margines*2), WHITE);
+        // Rysowanie tytułu zadania
+        DrawText(zadanie.tytul.c_str(), margines + 10, margines + 10, 20, WHITE);
 
-        // Nagłówek i informacje
-        DrawText("Zadanie 1", margines + 10, 10+margines, 20, WHITE);
-        DrawText("Czarne zbily pionla", margines + 10, 80 + margines, 16, WHITE);
-        DrawText("na skrzydle hetmanskim,", margines + 10, 100 + margines, 16, WHITE);
-        DrawText("jednak nie maja jeszcze", margines + 10, 120 + margines, 16, WHITE);
-        DrawText("wyprowadzonych figur", margines + 10, 140 + margines, 16, WHITE);
-        DrawText("-Znajdz najlepsze", margines + 10, 170 + margines, 16, WHITE);
-        DrawText("posuniecie dla bialego-", margines + 10, 190 + margines, 16, WHITE);
+        // Rysowanie opisu zadania
+        int wysokoscLinii = 20; // Odstęp między liniami tekstu
+        for (size_t i = 0; i < zadanie.opis.size(); ++i)
+        {
+            DrawText(zadanie.opis[i].c_str(), margines + 10, margines + 40 + i * wysokoscLinii, 16, WHITE);
+        }
 
         // Rysowanie szachownicy, przesuniętej w prawo o szerokość pola na tekst + margines
-        narysujSzachowniceFEN(fen); // Dodanie odstępu między polem a szachownicą
+        narysujSzachowniceFEN(zadanie.fen);
 
         // Rysowanie przycisku „Powrót”
         if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
         {
-            wPoziomie = false; // Wyjście z poziomu
+            wPoziomie = false;
         }
 
         // Rysowanie przycisku „Ustawienia”
         if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY))
         {
-            ustawieniaMenu(); // Przejście do ustawień
+            ustawieniaMenu();
         }
 
         EndDrawing();
@@ -330,9 +383,17 @@ void poziom1()
 
 
 
+
 void poziom2()
 {
-    string fen = "r4rk1/2pn1ppp/p1b1pq2/1p6/P1pP4/2P2NP1/Q3PPBP/R2R2K1 w";
+    // Wczytaj zadanie z pliku
+    Zadanie zadanie = wczytajZadanie("zadania/zadanie 2.txt");
+    if (zadanie.fen.empty())
+    {
+        std::cerr << "Nie udalo sie wczytac zadania!" << std::endl;
+        return;
+    }
+
     bool wPoziomie = true;
 
     while (wPoziomie && !WindowShouldClose())
@@ -344,29 +405,32 @@ void poziom2()
         int szerokoscPola = 200;
 
         // Rysowanie przezroczystego pola na informacje
-        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f)); // Półprzezroczyste tło
-
-        // Dodanie przyjemniejszego wyglądu – obramowanie
+        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f));
         DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), WHITE);
 
-        // Nagłówek i informacje
-        DrawText("Zadanie 2", margines + 10, 10 + margines, 20, WHITE);
-        DrawText("Otwarta przekatna a8-h1", margines + 10, 80 + margines, 16, WHITE);
-        DrawText("-Znajdz najlepsze", margines + 10, 110 + margines, 16, WHITE);
-        DrawText("posuniecie dla bialego-", margines + 10, 130 + margines, 16, WHITE);
+        // Rysowanie tytułu zadania
+        DrawText(zadanie.tytul.c_str(), margines + 10, margines + 10, 20, WHITE);
 
-        narysujSzachowniceFEN(fen);
+        // Rysowanie opisu zadania
+        int wysokoscLinii = 20; // Odstęp między liniami tekstu
+        for (size_t i = 0; i < zadanie.opis.size(); ++i)
+        {
+            DrawText(zadanie.opis[i].c_str(), margines + 10, margines + 40 + i * wysokoscLinii, 16, WHITE);
+        }
+
+        // Rysowanie szachownicy, przesuniętej w prawo o szerokość pola na tekst + margines
+        narysujSzachowniceFEN(zadanie.fen);
 
         // Rysowanie przycisku „Powrót”
         if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
         {
-            wPoziomie = false; // Wyjście z poziomu
+            wPoziomie = false;
         }
 
         // Rysowanie przycisku „Ustawienia”
         if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY))
         {
-            ustawieniaMenu(); // Przejście do ustawień
+            ustawieniaMenu();
         }
 
         EndDrawing();
@@ -374,7 +438,14 @@ void poziom2()
 }
 void poziom3()
 {
-    string fen = "r4rk1/ppn3pp/2p5/3pP3/6bq/2NB2R1/PP1Q1P1P/2KR4 w";
+    // Wczytaj zadanie z pliku
+    Zadanie zadanie = wczytajZadanie("zadania/zadanie 3.txt");
+    if (zadanie.fen.empty())
+    {
+        std::cerr << "Nie udalo sie wczytac zadania!" << std::endl;
+        return;
+    }
+
     bool wPoziomie = true;
 
     while (wPoziomie && !WindowShouldClose())
@@ -386,34 +457,32 @@ void poziom3()
         int szerokoscPola = 200;
 
         // Rysowanie przezroczystego pola na informacje
-        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f)); // Półprzezroczyste tło
-
-        // Dodanie przyjemniejszego wyglądu – obramowanie
+        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f));
         DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), WHITE);
 
-        // Nagłówek i informacje
-        DrawText("Zadanie 3", margines + 10, 10 + margines, 20, WHITE);
-        DrawText("Biale tutaj wyjatkowo", margines + 10, 80 + margines, 16, WHITE);
-        DrawText("zdecydowaly sie na 0-0-0,", margines + 10, 100 + margines, 16, WHITE);
-        DrawText("czyli dluga roszade", margines + 10, 120 + margines, 16, WHITE);
-        DrawText("pozwala im to na atak", margines + 10, 140 + margines, 16, WHITE);
-        DrawText("na skrzydle krolewskim", margines + 10, 160 + margines, 16, WHITE);
-        DrawText("-Znajdz najlepsze", margines + 10, 190 + margines, 16, WHITE);
-        DrawText("posuniecie dla bialego-", margines + 10, 210 + margines, 16, WHITE);
+        // Rysowanie tytułu zadania
+        DrawText(zadanie.tytul.c_str(), margines + 10, margines + 10, 20, WHITE);
+
+        // Rysowanie opisu zadania
+        int wysokoscLinii = 20; // Odstęp między liniami tekstu
+        for (size_t i = 0; i < zadanie.opis.size(); ++i)
+        {
+            DrawText(zadanie.opis[i].c_str(), margines + 10, margines + 40 + i * wysokoscLinii, 16, WHITE);
+        }
 
         // Rysowanie szachownicy, przesuniętej w prawo o szerokość pola na tekst + margines
-        narysujSzachowniceFEN(fen); // Dodanie odstępu między polem a szachownicą
+        narysujSzachowniceFEN(zadanie.fen);
 
         // Rysowanie przycisku „Powrót”
         if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
         {
-            wPoziomie = false; // Wyjście z poziomu
+            wPoziomie = false;
         }
 
         // Rysowanie przycisku „Ustawienia”
         if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY))
         {
-            ustawieniaMenu(); // Przejście do ustawień
+            ustawieniaMenu();
         }
 
         EndDrawing();
