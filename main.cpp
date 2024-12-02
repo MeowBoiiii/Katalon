@@ -162,6 +162,58 @@ bool rysujPrzycisk(const char* tekst, int x, int y, int szerokosc, int wysokosc,
     return nadPrzyciskiem && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 }
 
+//MUZYKA
+
+std::vector<Music> muzyka; // Wektor przechowujący różne utwory
+int aktualnyUtwor = 0;     // Indeks aktualnie odtwarzanego utworu
+bool muzykaOdtwarzana = true; // Flaga kontrolująca odtwarzanie muzyki
+
+void ladujMuzyke() {
+    muzyka.clear();
+    muzyka.push_back(LoadMusicStream("muzyka/muzyka1.mp3"));
+    muzyka.push_back(LoadMusicStream("muzyka/muzyka2.mp3"));
+    muzyka.push_back(LoadMusicStream("muzyka/muzyka3.mp3"));
+
+    if (!muzyka.empty()) {
+        aktualnyUtwor = 0;
+        PlayMusicStream(muzyka[aktualnyUtwor]);
+    }
+    else {
+        std::cerr << "Nie udalo sie zaladowac muzyki!" << std::endl;
+    }
+}
+
+
+void zwolnijMuzyke() {
+    // Zwolnij pamięć zajmowaną przez utwory
+    for (auto& utwor : muzyka) {
+        UnloadMusicStream(utwor);
+    }
+    muzyka.clear();
+}
+
+void obslugaMuzyki() {
+    UpdateMusicStream(muzyka[aktualnyUtwor]); // Aktualizuj strumień muzyki
+
+    // Sterowanie muzyką
+    if (IsKeyPressed(KEY_SPACE)) { // Pauza/Wznowienie
+        if (muzykaOdtwarzana) PauseMusicStream(muzyka[aktualnyUtwor]);
+        else ResumeMusicStream(muzyka[aktualnyUtwor]);
+        muzykaOdtwarzana = !muzykaOdtwarzana;
+    }
+    if (IsKeyPressed(KEY_RIGHT)) { // Następny utwór
+        StopMusicStream(muzyka[aktualnyUtwor]);
+        aktualnyUtwor = (aktualnyUtwor + 1) % muzyka.size();
+        PlayMusicStream(muzyka[aktualnyUtwor]);
+    }
+    if (IsKeyPressed(KEY_LEFT)) { // Poprzedni utwór
+        StopMusicStream(muzyka[aktualnyUtwor]);
+        aktualnyUtwor = (aktualnyUtwor - 1 + muzyka.size()) % muzyka.size();
+        PlayMusicStream(muzyka[aktualnyUtwor]);
+    }
+}
+
+
 // Funkcja menu głównego
 void menuGlowne()
 {
@@ -223,6 +275,17 @@ void ustawieniaMenu()
         ClearBackground(kolorTla);
 
         DrawText("Glosnosc Muzyki:", 200, 50, 20, WHITE);
+        if (IsKeyPressed(KEY_LEFT)) glosnoscMuzyki = max(glosnoscMuzyki - 10, 0);
+        if (IsKeyPressed(KEY_RIGHT)) glosnoscMuzyki = min(glosnoscMuzyki + 10, 100);
+        if (aktualnyUtwor >= 0 && aktualnyUtwor < muzyka.size()) {
+            SetMusicVolume(muzyka[aktualnyUtwor], glosnoscMuzyki / 100.0f);
+        }
+        else {
+            std::cerr << "Indeks utworu jest poza zakresem!" << std::endl;
+        }
+
+
+
         DrawText(TextFormat("%i", glosnoscMuzyki), 450, 50, 20, WHITE);
 
         // Sterowanie głośnością muzyki
@@ -492,9 +555,11 @@ void poziom3()
 void wybierzpoziom()
 {
     bool wMenuWyboruPoziomu = true; // Flaga kontrolująca pozostanie w menu wyboru poziomów
+    ladujMuzyke(); // Załaduj muzykę na początku
 
     while (wMenuWyboruPoziomu && !WindowShouldClose())
     {
+        obslugaMuzyki();
         BeginDrawing();
         ClearBackground(kolorTla);
 
@@ -536,6 +601,7 @@ void wybierzpoziom()
 
         EndDrawing();
     }
+    zwolnijMuzyke();
 }
 
 
@@ -545,6 +611,9 @@ int main()
     SetTargetFPS(60);
 
     ladujTeksturyFigur();
+    Music muzyka = LoadMusicStream("sciezka_do_muzyki.mp3");
+    PlayMusicStream(muzyka);
+    muzyka.looping = true;
 
     menuGlowne();
 
