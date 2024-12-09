@@ -164,15 +164,15 @@ bool rysujPrzycisk(const char* tekst, int x, int y, int szerokosc, int wysokosc,
 
 //MUZYKA
 
-std::vector<Music> muzyka; // Wektor przechowujący różne utwory
+vector<Music> muzyka; // Wektor przechowujący różne utwory
 int aktualnyUtwor = 0;     // Indeks aktualnie odtwarzanego utworu
 bool muzykaOdtwarzana = true; // Flaga kontrolująca odtwarzanie muzyki
 
 void ladujMuzyke() {
     muzyka.clear();
-    muzyka.push_back(LoadMusicStream("muzyka/muzyka1.mp3"));
-    muzyka.push_back(LoadMusicStream("muzyka/muzyka2.mp3"));
-    muzyka.push_back(LoadMusicStream("muzyka/muzyka3.mp3"));
+    muzyka.push_back(LoadMusicStream("muzyka/muzyka1.ogg"));
+    muzyka.push_back(LoadMusicStream("muzyka/muzyka2.ogg"));
+    muzyka.push_back(LoadMusicStream("muzyka/muzyka3.ogg"));
 
     if (!muzyka.empty()) {
         aktualnyUtwor = 0;
@@ -181,6 +181,10 @@ void ladujMuzyke() {
     else {
         std::cerr << "Nie udalo sie zaladowac muzyki!" << std::endl;
     }
+    if (aktualnyUtwor >= 0 && aktualnyUtwor < muzyka.size()) {
+        PlayMusicStream(muzyka[aktualnyUtwor]);
+    }
+
 }
 
 
@@ -190,6 +194,11 @@ void zwolnijMuzyke() {
         UnloadMusicStream(utwor);
     }
     muzyka.clear();
+}
+void ustawGlosnoscDlaWszystkich(float poziom) {
+    for (auto& utwor : muzyka) {
+        SetMusicVolume(utwor, poziom);
+    }
 }
 
 void obslugaMuzyki() {
@@ -611,7 +620,9 @@ int main()
     SetTargetFPS(60);
 
     ladujTeksturyFigur();
-    Music muzyka = LoadMusicStream("sciezka_do_muzyki.mp3");
+
+    Music muzyka = LoadMusicStream("muzyka1.ogg");
+    obslugaMuzyki();
     PlayMusicStream(muzyka);
     muzyka.looping = true;
 
