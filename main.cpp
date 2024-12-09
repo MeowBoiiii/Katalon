@@ -11,6 +11,16 @@
 using namespace std;
 
 const int ROZMIAR_SZACHOWNICY = 8;
+// Struktura reprezentująca stan pola
+struct Pole {
+    char figura;  // 'K' - król, 'Q' - królowa, 'R' - wieża, 'N' - skoczek, 'B' - goniec, 'P' - pionek, '.' - puste
+    bool czyPuste() const { return figura == '.'; }
+};
+
+// Szachownica jako tablica 2D
+std::vector<std::vector<Pole>> szachownica(ROZMIAR_SZACHOWNICY, std::vector<Pole>(ROZMIAR_SZACHOWNICY));
+
+
 const int ROZMIAR_POLA = 90;
 const Color KOLOR_JASNY = LIGHTGRAY;
 const Color KOLOR_CIEMNY = DARKGRAY;
@@ -132,8 +142,114 @@ void rysujFigure(char figura, int x, int y, int startX, int startY, int poleRozm
 }
 
 
-void narysujSzachowniceFEN(const string& fen) {
-    int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8; // Dopasowanie do mniejszego wymiaru okna
+void ustawSzachowniceZFen(const std::string& fen) {
+    int x = 0, y = 0;
+
+    for (char c : fen) {
+        if (c == ' ') break;
+        if (c == '/') {
+            y++;
+            x = 0;
+        }
+        else if (isdigit(c)) {
+            x += c - '0';  // Puste pola (reprezentowane cyframi w FEN)
+        }
+        else {
+            szachownica[y][x].figura = c;  // Ustawiamy figurę na odpowiednim polu
+            x++;
+        }
+    }
+}
+
+void narysujSzachowniceFEN(const std::string& fen, int& startX, int& startY, int& poleRozmiar) {
+    ustawSzachowniceZFen(fen);
+
+    // Dopasowanie szerokości szachownicy do rozmiaru okna
+    int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8;
+    startX = (GetScreenWidth() - szerokoscSzachownicy) / 2;
+    startY = (GetScreenHeight() - szerokoscSzachownicy) / 2;
+    poleRozmiar = szerokoscSzachownicy / ROZMIAR_SZACHOWNICY;
+
+    // Rysowanie pól szachownicy
+    for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++) {
+        for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++) {
+            Color kolorPola = ((x + y) % 2 == 0) ? kolorPolaJasny : kolorPolaCiemny;
+            DrawRectangle(startX + x * poleRozmiar, startY + y * poleRozmiar, poleRozmiar, poleRozmiar, kolorPola);
+        }
+    }
+
+    // Rysowanie figur na szachownicy
+    for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++) {
+        for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++) {
+            if (!szachownica[y][x].czyPuste()) {
+                rysujFigure(szachownica[y][x].figura, x, y, startX, startY, poleRozmiar);
+            }
+        }
+    }
+}
+
+void obsluzKlikniecia(int startX, int startY, int poleRozmiar) {
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        // Obliczanie indeksów klikniętego pola
+        Vector2 mousePos = GetMousePosition();
+        int x = (mousePos.x - startX) / poleRozmiar;
+        int y = (mousePos.y - startY) / poleRozmiar;
+
+        if (x >= 0 && x < ROZMIAR_SZACHOWNICY && y >= 0 && y < ROZMIAR_SZACHOWNICY) {
+            if (szachownica[y][x].czyPuste()) {
+                // Kliknięto puste pole, nic się nie dzieje
+                return;
+            }
+
+            // Wybór figury
+            // (Logika wyboru figury do przesunięcia)
+            // Na przykład: jeśli kliknięto figurę, zapisz ją, aby później ustawić ją w nowym miejscu.
+        }
+    }
+}
+
+void poziom1() {
+    // Wczytaj zadanie z pliku
+    Zadanie zadanie = wczytajZadanie("zadania/zadanie 1.txt");
+    if (zadanie.fen.empty()) {
+        std::cerr << "Nie udalo sie wczytac zadania!" << std::endl;
+        return;
+    }
+
+    bool wPoziomie = true;
+    int startX = 0, startY = 0, poleRozmiar = 0;  // Zmienna dla pozycji i rozmiaru pól
+
+    while (wPoziomie && !WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(kolorTla);
+        obslugaMuzyki();
+
+        // Rysowanie szachownicy
+        narysujSzachowniceFEN(zadanie.fen, startX, startY, poleRozmiar);
+
+        // Obsługa kliknięć (przesuwanie figur)
+        obsluzKlikniecia(startX, startY, poleRozmiar);
+
+        // Rysowanie przycisku „Powrót”
+        if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY)) {
+            wPoziomie = false;
+        }
+
+        // Rysowanie przycisku „Ustawienia”
+        if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY)) {
+            ustawieniaMenu();
+        }
+
+        EndDrawing();
+    }
+}
+
+
+
+void narysujSzachowniceFEN(const std::string& fen) {
+    ustawSzachowniceZFen(fen);
+
+    int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8;  // Dopasowanie do mniejszego wymiaru okna
     int startX = (GetScreenWidth() - szerokoscSzachownicy) / 2;
     int startY = (GetScreenHeight() - szerokoscSzachownicy) / 2;
     int poleRozmiar = szerokoscSzachownicy / ROZMIAR_SZACHOWNICY;
@@ -145,22 +261,17 @@ void narysujSzachowniceFEN(const string& fen) {
         }
     }
 
-    int x = 0, y = 0;
-    for (char c : fen) {
-        if (c == ' ') break;
-        if (c == '/') {
-            y++;
-            x = 0;
-        }
-        else if (isdigit(c)) {
-            x += c - '0';
-        }
-        else {
-            rysujFigure(c, x, y, startX, startY, poleRozmiar);
-            x++;
+    // Rysowanie figur na szachownicy
+    for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++) {
+        for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++) {
+            if (!szachownica[y][x].czyPuste()) {
+                rysujFigure(szachownica[y][x].figura, x, y, startX, startY, poleRozmiar);
+            }
         }
     }
 }
+
+
 
 
 bool rysujPrzycisk(const char* tekst, int x, int y, int szerokosc, int wysokosc, Color kolorklikniecia, Color kolorprzycisku)
@@ -433,62 +544,6 @@ void ustawieniaMenu()
         EndDrawing();
     }
 }
-
-// Funkcja poziom1
-void poziom1()
-{
-    // Wczytaj zadanie z pliku
-    Zadanie zadanie = wczytajZadanie("zadania/zadanie 1.txt");
-    if (zadanie.fen.empty())
-    {
-        std::cerr << "Nie udalo sie wczytac zadania!" << std::endl;
-        return;
-    }
-
-    bool wPoziomie = true;
-
-    while (wPoziomie && !WindowShouldClose())
-    {
-        BeginDrawing();
-        ClearBackground(kolorTla);
-        obslugaMuzyki();
-
-        int margines = 20;
-        int szerokoscPola = 200;
-
-        // Rysowanie przezroczystego pola na informacje
-        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f));
-        DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), WHITE);
-
-        // Rysowanie tytułu zadania
-        DrawText(zadanie.tytul.c_str(), margines + 10, margines + 10, 20, WHITE);
-
-        // Rysowanie opisu zadania
-        int wysokoscLinii = 20; // Odstęp między liniami tekstu
-        for (size_t i = 0; i < zadanie.opis.size(); ++i)
-        {
-            DrawText(zadanie.opis[i].c_str(), margines + 10, margines + 40 + i * wysokoscLinii, 16, WHITE);
-        }
-
-        // Rysowanie szachownicy, przesuniętej w prawo o szerokość pola na tekst + margines
-        narysujSzachowniceFEN(zadanie.fen);
-
-        // Rysowanie przycisku „Powrót”
-        if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
-        {
-            wPoziomie = false;
-        }
-
-        // Rysowanie przycisku „Ustawienia”
-        if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY))
-        {
-            ustawieniaMenu();
-        }
-
-        EndDrawing();
-    }
-}
-
 
 
 
