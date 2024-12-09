@@ -6,6 +6,7 @@
 #include <thread>
 #include <map>
 #include "raylib.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -21,6 +22,16 @@ string poczatkowa_pozycja_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 int szerokoscOkna = 1280;
 int wysokoscOkna = 720;
 Color kolorTla = LIME;
+
+/*template <typename T>
+T Clamp(T value, T min, T max) {
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
+*/
+
+
 
 void ustawieniaMenu();
 void wybierzpoziom();
@@ -167,6 +178,7 @@ bool rysujPrzycisk(const char* tekst, int x, int y, int szerokosc, int wysokosc,
 vector<Music> muzyka; // Wektor przechowujący różne utwory
 int aktualnyUtwor = 0;     // Indeks aktualnie odtwarzanego utworu
 bool muzykaOdtwarzana = true; // Flaga kontrolująca odtwarzanie muzyki
+float glosnoscMuzyki = 50.0f; // Domyślna głośność (0-100)
 
 void ladujMuzyke() {
     muzyka.clear();
@@ -202,6 +214,8 @@ void ustawGlosnoscDlaWszystkich(float poziom) {
 }
 
 void obslugaMuzyki() {
+    if (muzyka.empty()) return; // Jeśli wektor jest pusty, wyjdź
+
     UpdateMusicStream(muzyka[aktualnyUtwor]); // Aktualizuj strumień muzyki
 
     // Sterowanie muzyką
@@ -223,6 +237,7 @@ void obslugaMuzyki() {
 }
 
 
+
 // Funkcja menu głównego
 void menuGlowne()
 {
@@ -233,6 +248,7 @@ void menuGlowne()
     {
         BeginDrawing();
         ClearBackground(kolorTla);
+        obslugaMuzyki();
 
         // Rysowanie przycisków
         if (rysujPrzycisk("Zadania", szerokoscOkna / 2 - 200, wysokoscOkna / 2 - 300, 400, 100, DARKGRAY, GRAY))
@@ -280,29 +296,48 @@ void ustawieniaMenu()
 
     while (wMenu && !WindowShouldClose())
     {
+        obslugaMuzyki();
         BeginDrawing();
         ClearBackground(kolorTla);
 
+        // Rysowanie suwaka głośności
         DrawText("Glosnosc Muzyki:", 200, 50, 20, WHITE);
-        if (IsKeyPressed(KEY_LEFT)) glosnoscMuzyki = max(glosnoscMuzyki - 10, 0);
-        if (IsKeyPressed(KEY_RIGHT)) glosnoscMuzyki = min(glosnoscMuzyki + 10, 100);
-        if (aktualnyUtwor >= 0 && aktualnyUtwor < muzyka.size()) {
-            SetMusicVolume(muzyka[aktualnyUtwor], glosnoscMuzyki / 100.0f);
+        float suwakX = 400; // Pozycja X suwaka
+        float suwakY = 50; // Pozycja Y suwaka
+        float suwakSzerokosc = 300; // Szerokość suwaka
+
+        // Obsługa myszy dla zmiany głośności
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            Vector2 mousePos = GetMousePosition();
+            if (mousePos.x >= suwakX && mousePos.x <= suwakX + suwakSzerokosc &&
+                mousePos.y >= suwakY && mousePos.y <= suwakY + 20) {
+                glosnoscMuzyki = ((mousePos.x - suwakX) / suwakSzerokosc) * 100.0f;
+                //glosnoscMuzyki = Clamp(glosnoscMuzyki, 0.0f, 100.0f); // Utrzymuj wartość w zakresie 0-100
+                if (glosnoscMuzyki <= 0.0f) glosnoscMuzyki = 0.0f;
+                if (glosnoscMuzyki >= 100.0f) glosnoscMuzyki = 100.0f;
+                if (aktualnyUtwor >= 0 && aktualnyUtwor < muzyka.size()) {
+                    SetMusicVolume(muzyka[aktualnyUtwor], glosnoscMuzyki / 100.0f);
+                }
+            }
         }
-        else {
-            std::cerr << "Indeks utworu jest poza zakresem!" << std::endl;
+
+        // Rysowanie tła suwaka i wskaźnika
+        DrawRectangle(suwakX, suwakY, suwakSzerokosc, 20, LIGHTGRAY);
+        DrawRectangle(suwakX + (glosnoscMuzyki / 100.0f) * suwakSzerokosc - 5, suwakY - 5, 10, 30, RED);
+
+        // Wyświetlenie wartości głośności
+        DrawText(TextFormat("%i", (int)glosnoscMuzyki), suwakX + suwakSzerokosc + 100, suwakY-5, 20, WHITE);
+
+        if (rysujPrzycisk("Nastepny utwor", suwakX+suwakSzerokosc+20, suwakY-10, 200, 50, DARKGRAY, GRAY)) {
+            if (!muzyka.empty()) {
+                StopMusicStream(muzyka[aktualnyUtwor]);
+                aktualnyUtwor = (aktualnyUtwor + 1) % muzyka.size();
+                PlayMusicStream(muzyka[aktualnyUtwor]);
+            }
         }
-
-
-
-        DrawText(TextFormat("%i", glosnoscMuzyki), 450, 50, 20, WHITE);
-
-        // Sterowanie głośnością muzyki
-        if (IsKeyPressed(KEY_LEFT)) glosnoscMuzyki = max(glosnoscMuzyki - 10, 0);
-        if (IsKeyPressed(KEY_RIGHT)) glosnoscMuzyki = min(glosnoscMuzyki + 10, 100);
 
         // Przycisk do przełączania pełnego ekranu
-        if (rysujPrzycisk("Przelacz Pelen Ekran", szerokoscOkna / 2 - 100, 100, 200, 50, DARKGRAY, GRAY))
+        if (rysujPrzycisk("Pelen Ekran", szerokoscOkna / 2 - 100, 100, 200, 50, DARKGRAY, GRAY))
         {
             ToggleFullscreen();
             pelnyEkran = !pelnyEkran;
@@ -416,6 +451,7 @@ void poziom1()
     {
         BeginDrawing();
         ClearBackground(kolorTla);
+        obslugaMuzyki();
 
         int margines = 20;
         int szerokoscPola = 200;
@@ -472,6 +508,7 @@ void poziom2()
     {
         BeginDrawing();
         ClearBackground(kolorTla);
+        obslugaMuzyki();
 
         int margines = 20;
         int szerokoscPola = 200;
@@ -524,7 +561,7 @@ void poziom3()
     {
         BeginDrawing();
         ClearBackground(kolorTla);
-
+        obslugaMuzyki();
         int margines = 20;
         int szerokoscPola = 200;
 
@@ -564,10 +601,10 @@ void poziom3()
 void wybierzpoziom()
 {
     bool wMenuWyboruPoziomu = true; // Flaga kontrolująca pozostanie w menu wyboru poziomów
-    ladujMuzyke(); // Załaduj muzykę na początku
 
     while (wMenuWyboruPoziomu && !WindowShouldClose())
     {
+        //obslugaMuzyki();
         obslugaMuzyki();
         BeginDrawing();
         ClearBackground(kolorTla);
@@ -610,7 +647,6 @@ void wybierzpoziom()
 
         EndDrawing();
     }
-    zwolnijMuzyke();
 }
 
 
@@ -620,15 +656,18 @@ int main()
     SetTargetFPS(60);
 
     ladujTeksturyFigur();
+    InitAudioDevice();
+    ladujMuzyke();
 
-    Music muzyka = LoadMusicStream("muzyka1.ogg");
-    obslugaMuzyki();
+ /*   Music muzyka = LoadMusicStream("muzyka/muzyka1.ogg");
     PlayMusicStream(muzyka);
     muzyka.looping = true;
+    */
 
     menuGlowne();
 
     zwolnijTekstury();
+    zwolnijMuzyke();
     CloseWindow();
 
     return 0;
