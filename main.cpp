@@ -7,35 +7,23 @@
 #include <map>
 #include "raylib.h"
 #include <algorithm>
-#include <cctype>
-#include <cmath>
 
 using namespace std;
 
 const int ROZMIAR_SZACHOWNICY = 8;
-// Struktura reprezentująca stan pola
-struct Pole {
-    char figura; // Typ figury: 'P', 'R', 'N', 'B', 'Q', 'K', ' ' (puste pole)
-    char kolor;  // Kolor figury: 'w' (białe), 'b' (czarne)
-
-    bool czyPuste() const {
-        return figura == ' ';
-    }
-};
-
-bool figuraWybrana = false;
-int wybranePoleX = -1, wybranePoleY = -1;
-
-
-// Szachownica jako tablica 2D
-std::vector<std::vector<Pole>> szachownica(ROZMIAR_SZACHOWNICY, std::vector<Pole>(ROZMIAR_SZACHOWNICY));
-
-
 const int ROZMIAR_POLA = 90;
 const Color KOLOR_JASNY = LIGHTGRAY;
 const Color KOLOR_CIEMNY = DARKGRAY;
 Color kolorPolaJasny = LIGHTGRAY;
 Color kolorPolaCiemny = DARKGRAY;
+int zaznaczonyX = -1, zaznaczonyY = -1;
+bool figuraZaznaczona = false;
+// Reprezentacja szachownicy jako tablica 8x8
+char szachownica[8][8];
+struct Ruch {
+    int startX, startY, celX, celY;
+    char figuraBita;
+};
 
 string poczatkowa_pozycja_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
@@ -52,56 +40,41 @@ T Clamp(T value, T min, T max) {
 */
 
 
-
-void ustawieniaMenu();
-void wybierzpoziom();
 std::map<char, Texture2D> teksturyFigur;
 
-struct Zadanie
-{
-    std::string fen;
-    std::string tytul;
-    std::vector<std::string> opis;
+bool czyBialeNaRuchu = true;
+
+struct Zadanie {
+    string fen;
+    string tytul;
+    vector<string> opis;
+    bool bialeZaczynaja = true; // Domyślnie białe zaczynają
 };
 
-// wczytywanie danych z pliku tekstowego
-Zadanie wczytajZadanie(const std::string& sciezkaPliku)
-{
+// Modyfikacja funkcji inicjalizacji zadania
+Zadanie wczytajZadanie(const string& sciezka) {
     Zadanie zadanie;
-    std::ifstream plik(sciezkaPliku);
-
-    if (!plik.is_open())
-    {
-        cerr << "Nie mozna otworzyc pliku: " << sciezkaPliku << endl;
-        return zadanie;
+    ifstream plik(sciezka);
+    if (plik.is_open()) {
+        getline(plik, zadanie.fen);
+        getline(plik, zadanie.tytul);
+        string linia;
+        while (getline(plik, linia)) {
+            if (linia == "BIALE") {
+                zadanie.bialeZaczynaja = true;
+            }
+            else if (linia == "CZARNE") {
+                zadanie.bialeZaczynaja = false;
+            }
+            else {
+                zadanie.opis.push_back(linia);
+            }
+        }
+        plik.close();
+        czyBialeNaRuchu = zadanie.bialeZaczynaja; // Ustawienie kto zaczyna
     }
-
-    std::string linia;
-    bool pierwszaLinia = true;
-    bool tytulUstawiony = false;
-
-    while (std::getline(plik, linia))
-    {
-        if (pierwszaLinia)
-        {
-            zadanie.fen = linia; // Pierwsza linia to FEN
-            pierwszaLinia = false;
-        }
-        else if (!tytulUstawiony && !linia.empty())
-        {
-            zadanie.tytul = linia; // Następna niepusta linia to tytuł
-            tytulUstawiony = true;
-        }
-        else
-        {
-            zadanie.opis.push_back(linia); // Pozostałe linie to opis
-        }
-    }
-
-    plik.close();
     return zadanie;
 }
-
 void rysujTekstNaSrodku(const char* tekst, int rozmiarCzcionki, Color kolor)
 {
     int szerokoscTekstu = MeasureText(tekst, rozmiarCzcionki);
@@ -151,186 +124,346 @@ void rysujFigure(char figura, int x, int y, int startX, int startY, int poleRozm
     }
 }
 
-
-void ustawSzachowniceZFen(const std::string& fen) {
-    int x = 0, y = 0;
-
-    for (char c : fen) {
-        if (c == ' ') break;
-        if (c == '/') {
-            y++;
-            x = 0;
-        }
-        else if (isdigit(c)) {
-            x += c - '0';  // Puste pola (reprezentowane cyframi w FEN)
-        }
-        else {
-            szachownica[y][x].figura = c;  // Ustawiamy figurę na odpowiednim polu
-            x++;
-        }
-    }
-}
-
-void narysujSzachowniceFEN(const std::string& fen, int& startX, int& startY, int& poleRozmiar) {
-    ustawSzachowniceZFen(fen);
-
-    // Dopasowanie szerokości szachownicy do rozmiaru okna
-    int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8;
-    startX = (GetScreenWidth() - szerokoscSzachownicy) / 2;
-    startY = (GetScreenHeight() - szerokoscSzachownicy) / 2;
-    poleRozmiar = szerokoscSzachownicy / ROZMIAR_SZACHOWNICY;
-
-    // Rysowanie pól szachownicy
-    for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++) {
-        for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++) {
-            Color kolorPola = ((x + y) % 2 == 0) ? kolorPolaJasny : kolorPolaCiemny;
-            DrawRectangle(startX + x * poleRozmiar, startY + y * poleRozmiar, poleRozmiar, poleRozmiar, kolorPola);
-        }
-    }
-
-    // Rysowanie figur na szachownicy
-    for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++) {
-        for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++) {
-            if (!szachownica[y][x].czyPuste()) {
-                rysujFigure(szachownica[y][x].figura, x, y, startX, startY, poleRozmiar);
-            }
-        }
-    }
-}
-
-void obsluzKlikniecia(int startX, int startY, int poleRozmiar) {
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        // Pozycja myszy
-        Vector2 mousePos = GetMousePosition();
-        int x = (mousePos.x - startX) / poleRozmiar;
-        int y = (mousePos.y - startY) / poleRozmiar;
-
-        // Sprawdzenie, czy kliknięcie jest na planszy
-        if (x >= 0 && x < ROZMIAR_SZACHOWNICY && y >= 0 && y < ROZMIAR_SZACHOWNICY) {
-            if (!figuraWybrana) {
-                // Wybór figury
-                if (!szachownica[y][x].czyPuste()) {
-                    figuraWybrana = true;
-                    wybranePoleX = x;
-                    wybranePoleY = y;
-                }
+// Funkcja do konwersji szachownicy na FEN
+string konwertujNaFEN() {
+    string fen;
+    for (int y = 0; y < 8; ++y) {
+        int pustePola = 0;
+        for (int x = 0; x < 8; ++x) {
+            if (szachownica[y][x] == ' ') {
+                pustePola++;
             }
             else {
-                // Sprawdzenie poprawności ruchu
-                if (czyRuchPoprawny(wybranePoleX, wybranePoleY, x, y)) {
-                    // Przesuń figurę na nowe pole
-                    szachownica[y][x].figura = szachownica[wybranePoleY][wybranePoleX].figura;
-
-                    // Opróżnij poprzednie pole
-                    szachownica[wybranePoleY][wybranePoleX].figura = ' ';
-
-                    // Reset wyboru
-                    figuraWybrana = false;
-                    wybranePoleX = -1;
-                    wybranePoleY = -1;
+                if (pustePola > 0) {
+                    fen += to_string(pustePola);
+                    pustePola = 0;
                 }
-                else {
-                    // Niepoprawny ruch – reset wyboru
-                    figuraWybrana = false;
-                    wybranePoleX = -1;
-                    wybranePoleY = -1;
+                fen += szachownica[y][x];
+            }
+        }
+        if (pustePola > 0) {
+            fen += to_string(pustePola);
+        }
+        if (y < 7) fen += '/';
+    }
+    return fen;
+}
+
+bool czyFiguraAtakujePole(int startX, int startY, int celX, int celY) {
+    char figura = szachownica[startY][startX];
+    if (figura == ' ') return false;
+
+    // Ruchy pionka
+    if (figura == 'P') { // Biały pionek
+        return (celY == startY - 1 && abs(celX - startX) == 1);
+    }
+    else if (figura == 'p') { // Czarny pionek
+        return (celY == startY + 1 && abs(celX - startX) == 1);
+    }
+    // Ruchy skoczka
+    else if (figura == 'N' || figura == 'n') {
+        int dx = abs(celX - startX), dy = abs(celY - startY);
+        return (dx * dx + dy * dy == 5); // Skoczek porusza się w "L"
+    }
+    // Ruchy wieży
+    else if (figura == 'R' || figura == 'r') {
+        if (celX == startX || celY == startY) {
+            int dx = (celX - startX == 0) ? 0 : (celX - startX) / abs(celX - startX);
+            int dy = (celY - startY == 0) ? 0 : (celY - startY) / abs(celY - startY);
+            for (int x = startX + dx, y = startY + dy; x != celX || y != celY; x += dx, y += dy) {
+                if (szachownica[y][x] != ' ') return false;
+            }
+            return true;
+        }
+    }
+    // Ruchy gońca
+    else if (figura == 'B' || figura == 'b') {
+        if (abs(celX - startX) == abs(celY - startY)) {
+            int dx = (celX - startX > 0) ? 1 : -1;
+            int dy = (celY - startY > 0) ? 1 : -1;
+            for (int x = startX + dx, y = startY + dy; x != celX; x += dx, y += dy) {
+                if (szachownica[y][x] != ' ') return false;
+            }
+            return true;
+        }
+    }
+    // Ruchy hetmana
+    else if (figura == 'Q' || figura == 'q') {
+        if (abs(celX - startX) == abs(celY - startY) || celX == startX || celY == startY) {
+            int dx = (celX - startX == 0) ? 0 : (celX - startX) / abs(celX - startX);
+            int dy = (celY - startY == 0) ? 0 : (celY - startY) / abs(celY - startY);
+            for (int x = startX + dx, y = startY + dy; x != celX || y != celY; x += dx, y += dy) {
+                if (szachownica[y][x] != ' ') return false;
+            }
+            return true;
+        }
+    }
+
+    return false; // Nieznana figura lub brak ataku
+}
+
+bool czySzach(bool bialyKrol) {
+    int krolX = -1, krolY = -1;
+    char krol = bialyKrol ? 'K' : 'k';
+
+    // Znajdź pozycję króla
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+            if (szachownica[y][x] == krol) {
+                krolX = x;
+                krolY = y;
+                break;
+            }
+        }
+        if (krolX != -1) break;
+    }
+
+    // Sprawdź, czy jakakolwiek figura przeciwnika atakuje króla
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+            char figura = szachownica[y][x];
+            if (bialyKrol && figura >= 'a' && figura <= 'z') {
+                if (czyFiguraAtakujePole(x, y, krolX, krolY)) {
+                    return true;
+                }
+            }
+            else if (!bialyKrol && figura >= 'A' && figura <= 'Z') {
+                if (czyFiguraAtakujePole(x, y, krolX, krolY)) {
+                    return true;
                 }
             }
         }
     }
+
+    return false; // Król nie jest zagrożony
 }
 
-bool czyRuchPoprawny(int startX, int startY, int endX, int endY) {
-    // Pobierz figurę i jej kolor
-    Pole startPole = szachownica[startY][startX];
-    Pole endPole = szachownica[endY][endX];
 
-    if (startPole.czyPuste()) return false; // Brak figury na starcie
-    if (startPole.kolor == endPole.kolor) return false; // Nie można zbić swojej figury
+bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
+    char figura = szachownica[startY][startX];
+    char cel = szachownica[celY][celX];
 
-    char figura = startPole.figura;
-    int dx = abs(endX - startX);
-    int dy = abs(endY - startY);
-
-    switch (figura) {
-    case 'P': // Pionek biały
-        if (startPole.kolor == 'w') {
-            if (endY == startY - 1 && endX == startX && endPole.czyPuste()) return true; // Ruch do przodu
-            if (endY == startY - 1 && abs(endX - startX) == 1 && !endPole.czyPuste() && endPole.kolor == 'b') return true; // Bicie
-            if (startY == 6 && endY == 4 && endX == startX && endPole.czyPuste()) return true; // Podwójny ruch z pozycji startowej
-        }
-        else { // Pionek czarny
-            if (endY == startY + 1 && endX == startX && endPole.czyPuste()) return true;
-            if (endY == startY + 1 && abs(endX - startX) == 1 && !endPole.czyPuste() && endPole.kolor == 'w') return true;
-            if (startY == 1 && endY == 3 && endX == startX && endPole.czyPuste()) return true;
-        }
-        break;
-
-    case 'R': // Wieża
-        if (dx == 0 || dy == 0) return czyDrogaPusta(startX, startY, endX, endY);
-        break;
-
-    case 'N': // Skoczek
-        if ((dx == 2 && dy == 1) || (dx == 1 && dy == 2)) return true;
-        break;
-
-    case 'B': // Goniec
-        if (dx == dy) return czyDrogaPusta(startX, startY, endX, endY);
-        break;
-
-    case 'Q': // Hetman
-        if (dx == dy || dx == 0 || dy == 0) return czyDrogaPusta(startX, startY, endX, endY);
-        break;
-
-    case 'K': // Król
-        if (dx <= 1 && dy <= 1) return true; // Król może poruszać się o jedno pole
-        // Dodaj logikę roszady
-        break;
-
-    default:
+    // Sprawdzenie podstawowe: cel musi znajdować się w granicach szachownicy i nie może być na miejscu startowym
+    if (celX < 0 || celX >= 8 || celY < 0 || celY >= 8) {
+        return false;
+    }
+    if (startX == celX && startY == celY) {
         return false;
     }
 
-    return false;
-}
+    // Sprawdzenie, czy figura docelowa nie jest tego samego koloru
+    bool figuraBiala = (figura >= 'A' && figura <= 'Z');
+    bool celBialy = (cel >= 'A' && cel <= 'Z');
+    bool figuraCzarna = (figura >= 'a' && figura <= 'z');
+    bool celCzarny = (cel >= 'a' && cel <= 'z');
 
-bool czyDrogaPusta(int startX, int startY, int endX, int endY) {
-    int dx = (endX - startX) ? (endX - startX) / abs(endX - startX) : 0;
-    int dy = (endY - startY) ? (endY - startY) / abs(endY - startY) : 0;
+    if ((figuraBiala && celBialy) || (figuraCzarna && celCzarny)) {
+        return false; // Nie można bić swojej figury
+    }
+    // Tymczasowy ruch
+    szachownica[startY][startX] = ' ';
+    szachownica[celY][celX] = figura;
 
-    int x = startX + dx;
-    int y = startY + dy;
-
-    while (x != endX || y != endY) {
-        if (!szachownica[y][x].czyPuste()) return false;
-        x += dx;
-        y += dy;
+    // Sprawdzenie szacha
+    bool wynik = true;
+    if (figuraBiala) {
+        wynik = !czySzach(true);
+    }
+    else {
+        wynik = !czySzach(false);
     }
 
-    return true;
+    // Cofnięcie ruchu
+    szachownica[startY][startX] = figura;
+    szachownica[celY][celX] = cel;
+    // Ruchy pionka
+    if (figura == 'P') { // Biały pionek
+        if (cel == ' ' && celX == startX && celY == startY - 1) {
+            return true; // Ruch o jedno pole do przodu
+        }
+        if (cel == ' ' && startY == 6 && celX == startX && celY == startY - 2) {
+            return true; // Ruch o dwa pola do przodu z pozycji startowej
+        }
+        if (cel != ' ' && abs(celX - startX) == 1 && celY == startY - 1) {
+            return true; // Bicie na ukos
+        }
+    }
+    else if (figura == 'p') { // Czarny pionek
+        if (cel == ' ' && celX == startX && celY == startY + 1) {
+            return true; // Ruch o jedno pole do przodu
+        }
+        if (cel == ' ' && startY == 1 && celX == startX && celY == startY + 2) {
+            return true; // Ruch o dwa pola do przodu z pozycji startowej
+        }
+        if (cel != ' ' && abs(celX - startX) == 1 && celY == startY + 1) {
+            return true; // Bicie na ukos
+        }
+    }
+    // Ruchy skoczka
+    else if (figura == 'N' || figura == 'n') { // Biały lub czarny skoczek
+        int dx = abs(celX - startX);
+        int dy = abs(celY - startY);
+        if (dx * dx + dy * dy == 5) { // Skoczek porusza się w kształcie litery "L"
+            return true;
+        }
+    }
+    // Ruchy wieży
+    else if (figura == 'R' || figura == 'r') { // Biała lub czarna wieża
+        if (celX == startX || celY == startY) { // Porusza się tylko w pionie lub poziomie
+            // Sprawdzenie przeszkód na drodze
+            int dx = (celX - startX == 0) ? 0 : (celX - startX) / abs(celX - startX);
+            int dy = (celY - startY == 0) ? 0 : (celY - startY) / abs(celY - startY);
+            int x = startX + dx, y = startY + dy;
+            while (x != celX || y != celY) {
+                if (szachownica[y][x] != ' ') return false;
+                x += dx;
+                y += dy;
+            }
+            return true;
+        }
+    }
+    // Ruchy gońca
+    else if (figura == 'B' || figura == 'b') { // Biały lub czarny goniec
+        if (abs(celX - startX) == abs(celY - startY)) { // Porusza się po przekątnych
+            int dx = (celX - startX > 0) ? 1 : -1;
+            int dy = (celY - startY > 0) ? 1 : -1;
+            int x = startX + dx, y = startY + dy;
+            while (x != celX && y != celY) {
+                if (szachownica[y][x] != ' ') return false;
+                x += dx;
+                y += dy;
+            }
+            return true;
+        }
+    }
+    // Ruchy hetmana
+    else if (figura == 'Q' || figura == 'q') { // Biały lub czarny hetman
+        // Hetman łączy ruchy wieży i gońca
+        if (abs(celX - startX) == abs(celY - startY) || celX == startX || celY == startY) {
+            int dx = (celX - startX == 0) ? 0 : (celX - startX) / abs(celX - startX);
+            int dy = (celY - startY == 0) ? 0 : (celY - startY) / abs(celY - startY);
+            int x = startX + dx, y = startY + dy;
+            while (x != celX || y != celY) {
+                if (szachownica[y][x] != ' ') return false;
+                x += dx;
+                y += dy;
+            }
+            return true;
+        }
+    }
+    if (figura == 'K' || figura == 'k') { // Biały lub czarny król
+        if (abs(celX - startX) <= 1 && abs(celY - startY) <= 1) {
+            // Król porusza się o jedno pole w dowolnym kierunku (standardowy ruch)
+            return true;
+        }
+
+        // Roszada
+        if (startY == celY && (celX == startX + 2 || celX == startX - 2)) {
+            // Sprawdzenie, czy jest roszada (król przesuwa się o dwa pola w poziomie)
+            if (figura == 'K') { // Roszada białego króla
+                if (startX == 4 && (celX == 6 || celX == 2)) {
+                    // Warunki roszady:
+                    // 1. Król nie może się poruszać przez szach
+                    if (czySzach(true)) return false;
+                    // 2. Muszą być puste pola między królem a wieżą
+                    if (celX == 6) { // Król na e1 i wieża na h1
+                        if (szachownica[7][5] != ' ' || szachownica[7][6] != ' ') return false;
+                        if (szachownica[7][7] != 'R') return false; // Wieża na h1
+                        // Przesunięcie wieży
+                        szachownica[7][5] = 'R'; // Wieża przechodzi na f1
+                        szachownica[7][7] = ' '; // Pole h1 jest puste
+                    }
+                    else if (celX == 2) { // Król na e1 i wieża na a1
+                        if (szachownica[7][1] != ' ' || szachownica[7][2] != ' ' || szachownica[7][3] != ' ') return false;
+                        if (szachownica[7][0] != 'R') return false; // Wieża na a1
+                        // Przesunięcie wieży
+                        szachownica[7][3] = 'R'; // Wieża przechodzi na d1
+                        szachownica[7][0] = ' '; // Pole a1 jest puste
+                    }
+                    return true; // Roszada białego króla zakończona
+                }
+            }
+            else if (figura == 'k') { // Roszada czarnego króla
+                if (startX == 4 && (celX == 6 || celX == 2)) {
+                    // Warunki roszady:
+                    // 1. Król nie może się poruszać przez szach
+                    if (czySzach(false)) return false;
+                    // 2. Muszą być puste pola między królem a wieżą
+                    if (celX == 6) { // Król na e8 i wieża na h8
+                        if (szachownica[0][5] != ' ' || szachownica[0][6] != ' ') return false;
+                        if (szachownica[0][7] != 'r') return false; // Wieża na h8
+                        // Przesunięcie wieży
+                        szachownica[0][5] = 'r'; // Wieża przechodzi na f8
+                        szachownica[0][7] = ' '; // Pole h8 jest puste
+                    }
+                    else if (celX == 2) { // Król na e8 i wieża na a8
+                        if (szachownica[0][1] != ' ' || szachownica[0][2] != ' ' || szachownica[0][3] != ' ') return false;
+                        if (szachownica[0][0] != 'r') return false; // Wieża na a8
+                        // Przesunięcie wieży
+                        szachownica[0][3] = 'r'; // Wieża przechodzi na d8
+                        szachownica[0][0] = ' '; // Pole a8 jest puste
+                    }
+                    return true; // Roszada czarnego króla zakończona
+                }
+            }
+        }
+    }
+
+    return false; // Domyślnie ruch nie jest poprawny
 }
 
-void aktualizujSzachownice(int startX, int startY, int endX, int endY) {
-    szachownica[endY][endX] = szachownica[startY][startX]; // Przenieś figurę
-    szachownica[startY][startX] = { ' ', ' ' }; // Opróżnij poprzednie pole
+
+void wypiszSzachownice() {
+    for (int y = 0; y < 8; ++y) {
+        for (int x = 0; x < 8; ++x) {
+            cout << szachownica[y][x] << " ";
+        }
+        cout << endl;
+    }
+    cout << "-----------------" << endl;
 }
 
-void ustawSzachowniceZFen(const std::string& fen) {
-    int x = 0, y = 0;
+// Modyfikacja funkcji obslugaRuchow
+void obslugaRuchow(Zadanie& zadanie) {
+    int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8;
+    int startX = (GetScreenWidth() - szerokoscSzachownicy) / 2;
+    int startY = (GetScreenHeight() - szerokoscSzachownicy) / 2;
+    int poleRozmiar = szerokoscSzachownicy / ROZMIAR_SZACHOWNICY;
 
-    for (char c : fen) {
-        if (c == ' ') break;
-        if (c == '/') {
-            y++;
-            x = 0;
-        }
-        else if (isdigit(c)) {
-            x += c - '0';
-        }
-        else {
-            szachownica[y][x].figura = c;
-            szachownica[y][x].kolor = isupper(c) ? 'w' : 'b';
-            x++;
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Vector2 pozycjaMyszy = GetMousePosition();
+        int x = (pozycjaMyszy.x - startX) / poleRozmiar;
+        int y = (pozycjaMyszy.y - startY) / poleRozmiar;
+
+        if (x >= 0 && x < 8 && y >= 0 && y < 8) { // Kliknięcie w granicach szachownicy
+            if (!figuraZaznaczona) {
+                if (szachownica[y][x] != ' ') { // Zaznacz figurę
+                    bool bialeFigura = isupper(szachownica[y][x]);
+                    if (czyBialeNaRuchu == bialeFigura) { // Sprawdzanie ruchu właściwego gracza
+                        zaznaczonyX = x;
+                        zaznaczonyY = y;
+                        figuraZaznaczona = true;
+                        cout << "Zaznaczono figure: " << szachownica[y][x] << " na (" << x << ", " << y << ")" << endl;
+                    }
+                    else {
+                        cout << "Nie mozesz wykonac ruchu ta figura!" << endl;
+                    }
+                }
+            }
+            else {
+                cout << "Proba ruchu z (" << zaznaczonyX << ", " << zaznaczonyY << ") na (" << x << ", " << y << ")" << endl;
+                if (czyRuchPoprawny(zaznaczonyX, zaznaczonyY, x, y)) {
+                    szachownica[y][x] = szachownica[zaznaczonyY][zaznaczonyX];
+                    szachownica[zaznaczonyY][zaznaczonyX] = ' ';
+                    zadanie.fen = konwertujNaFEN(); // Aktualizuj FEN
+                    czyBialeNaRuchu = !czyBialeNaRuchu; // Zmiana tury
+                    cout << "Ruch wykonany. Nowy FEN: " << zadanie.fen << endl;
+                }
+                else {
+                    cout << "Niepoprawny ruch!" << endl;
+                }
+                figuraZaznaczona = false;
+            }
         }
     }
 }
@@ -339,12 +472,8 @@ void ustawSzachowniceZFen(const std::string& fen) {
 
 
 
-
-
-void narysujSzachowniceFEN(const std::string& fen) {
-    ustawSzachowniceZFen(fen);
-
-    int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8;  // Dopasowanie do mniejszego wymiaru okna
+void narysujSzachowniceFEN(const string& fen) {
+    int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8; // Dopasowanie do mniejszego wymiaru okna
     int startX = (GetScreenWidth() - szerokoscSzachownicy) / 2;
     int startY = (GetScreenHeight() - szerokoscSzachownicy) / 2;
     int poleRozmiar = szerokoscSzachownicy / ROZMIAR_SZACHOWNICY;
@@ -356,17 +485,43 @@ void narysujSzachowniceFEN(const std::string& fen) {
         }
     }
 
-    // Rysowanie figur na szachownicy
-    for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++) {
-        for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++) {
-            if (!szachownica[y][x].czyPuste()) {
-                rysujFigure(szachownica[y][x].figura, x, y, startX, startY, poleRozmiar);
-            }
+    int x = 0, y = 0;
+    for (char c : fen) {
+        if (c == ' ') break;
+        if (c == '/') {
+            y++;
+            x = 0;
+        }
+        else if (isdigit(c)) {
+            x += c - '0';
+        }
+        else {
+            rysujFigure(c, x, y, startX, startY, poleRozmiar);
+            x++;
         }
     }
 }
 
-
+// Funkcja do inicjalizacji szachownicy na podstawie FEN
+void inicjalizujSzachownice(const string& fen) {
+    int x = 0, y = 0;
+    for (char c : fen) {
+        if (c == ' ') break;
+        if (c == '/') {
+            y++;
+            x = 0;
+        }
+        else if (isdigit(c)) {
+            int pustePola = c - '0';
+            for (int i = 0; i < pustePola; ++i) {
+                szachownica[y][x++] = ' '; // Puste pole
+            }
+        }
+        else {
+            szachownica[y][x++] = c; // Figura
+        }
+    }
+}
 
 
 bool rysujPrzycisk(const char* tekst, int x, int y, int szerokosc, int wysokosc, Color kolorklikniecia, Color kolorprzycisku)
@@ -442,52 +597,26 @@ void obslugaMuzyki() {
     }
 }
 
-
-
-// Funkcja menu głównego
-void menuGlowne()
+void zobacztworcow()
 {
-    bool wUstawieniach = false;
-    bool wWyborzePoziomow = false;
-
-    while (!WindowShouldClose())
+    bool wogladaniutworcow = true; // Flaga kontrolująca pozostanie w menu wyboru poziomów
+    while (wogladaniutworcow && !WindowShouldClose())
     {
+        obslugaMuzyki();
         BeginDrawing();
         ClearBackground(kolorTla);
-        obslugaMuzyki();
-
-        // Rysowanie przycisków
-        if (rysujPrzycisk("Zadania", szerokoscOkna / 2 - 200, wysokoscOkna / 2 - 300, 400, 100, DARKGRAY, GRAY))
+        DrawText("Kod - Pawel Handwerkier", 400, 50, 30, DARKGRAY);
+        DrawText("Grafika - kradzione z chess.com", 400, 100, 30, DARKGRAY);
+        // Dodanie przycisku do powrotu do głównego menu
+        if (rysujPrzycisk("Wroc", szerokoscOkna / 2 - 100, GetScreenHeight() - 100, 200, 50, DARKGRAY, GRAY))
         {
-            wWyborzePoziomow = true;
-        }
-        if (rysujPrzycisk("Ustawienia", szerokoscOkna / 2 - 100, wysokoscOkna / 2 - 100, 200, 50, DARKGRAY, GRAY))
-        {
-            wUstawieniach = true;
-        }
-        if (rysujPrzycisk("Tworcy", szerokoscOkna / 2 - 100, wysokoscOkna / 2, 200, 50, DARKGRAY, GRAY))
-        {
-            rysujTekstNaSrodku("Paweł Handwerkier", 30, DARKGRAY);
-        }
-        if (rysujPrzycisk("Wyjdz", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 100, 200, 50, DARKGRAY, GRAY))
-        {
-            CloseWindow(); // Wyjście z aplikacji
+            wogladaniutworcow = false; // Wyjście z tworcow
         }
 
         EndDrawing();
 
-        // Jeśli użytkownik wybrał opcję "Ustawienia", wywołujemy odpowiednią funkcję
-        if (wUstawieniach)
-        {
-            ustawieniaMenu();  // Funkcja do wyświetlenia menu ustawień
-            wUstawieniach = false; // Powrót do głównego menu po wyjściu z ustawień
-        }
-        if (wWyborzePoziomow)
-        {
-            wybierzpoziom();
-            wWyborzePoziomow = false;
-        }
     }
+
 }
 
 void ustawieniaMenu()
@@ -532,9 +661,9 @@ void ustawieniaMenu()
         DrawRectangle(suwakX + (glosnoscMuzyki / 100.0f) * suwakSzerokosc - 5, suwakY - 5, 10, 30, RED);
 
         // Wyświetlenie wartości głośności
-        DrawText(TextFormat("%i", (int)glosnoscMuzyki), suwakX + suwakSzerokosc + 100, suwakY-5, 20, WHITE);
+        DrawText(TextFormat("%i", (int)glosnoscMuzyki), suwakX + suwakSzerokosc + 100, suwakY - 5, 20, WHITE);
 
-        if (rysujPrzycisk("Nastepny utwor", suwakX+suwakSzerokosc+20, suwakY-10, 200, 50, DARKGRAY, GRAY)) {
+        if (rysujPrzycisk("Nastepny utwor", suwakX + suwakSzerokosc + 20, suwakY - 10, 200, 50, DARKGRAY, GRAY)) {
             if (!muzyka.empty()) {
                 StopMusicStream(muzyka[aktualnyUtwor]);
                 aktualnyUtwor = (aktualnyUtwor + 1) % muzyka.size();
@@ -639,41 +768,40 @@ void ustawieniaMenu()
         EndDrawing();
     }
 }
-
+// Funkcje poziomów
 void poziom1() {
-    // Wczytaj zadanie z pliku
     Zadanie zadanie = wczytajZadanie("zadania/zadanie 1.txt");
     if (zadanie.fen.empty()) {
-        std::cerr << "Nie udalo sie wczytac zadania!" << std::endl;
+        std::cerr << "Nie udało się wczytać zadania!" << std::endl;
         return;
     }
-
+    inicjalizujSzachownice(zadanie.fen);
     bool wPoziomie = true;
-    int startX = 0, startY = 0, poleRozmiar = 0;  // Zmienna dla pozycji i rozmiaru pól
 
     while (wPoziomie && !WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(kolorTla);
         obslugaMuzyki();
 
-        // Rysowanie szachownicy
-        narysujSzachowniceFEN(zadanie.fen, startX, startY, poleRozmiar);
+        int margines = 20;
+        int szerokoscPola = 200;
 
-        // Obsługa kliknięć (przesuwanie figur)
-        obsluzKlikniecia(startX, startY, poleRozmiar);
+        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f));
+        DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), WHITE);
 
-        // Wyróżnienie wybranego pola
-        if (figuraWybrana) {
-            DrawRectangleLines(startX + wybranePoleX * poleRozmiar, startY + wybranePoleY * poleRozmiar,
-                poleRozmiar, poleRozmiar, RED);
+        DrawText(zadanie.tytul.c_str(), margines + 10, margines + 10, 20, WHITE);
+        obslugaRuchow(zadanie);
+
+        for (size_t i = 0; i < zadanie.opis.size(); ++i) {
+            DrawText(zadanie.opis[i].c_str(), margines + 10, margines + 40 + i * 20, 16, WHITE);
         }
 
-        // Rysowanie przycisku „Powrót”
+        narysujSzachowniceFEN(zadanie.fen); // Rysowanie szachownicy z aktualnym FEN
+
         if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY)) {
             wPoziomie = false;
         }
 
-        // Rysowanie przycisku „Ustawienia”
         if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY)) {
             ustawieniaMenu();
         }
@@ -681,157 +809,140 @@ void poziom1() {
         EndDrawing();
     }
 }
-
-
-void poziom2()
-{
-    // Wczytaj zadanie z pliku
-    Zadanie zadanie = wczytajZadanie("zadania/zadanie 2.txt");
-    if (zadanie.fen.empty())
-    {
-        std::cerr << "Nie udalo sie wczytac zadania!" << std::endl;
-        return;
-    }
-
-    bool wPoziomie = true;
-
-    while (wPoziomie && !WindowShouldClose())
-    {
-        BeginDrawing();
-        ClearBackground(kolorTla);
-        obslugaMuzyki();
-
-        int margines = 20;
-        int szerokoscPola = 200;
-
-        // Rysowanie przezroczystego pola na informacje
-        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f));
-        DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), WHITE);
-
-        // Rysowanie tytułu zadania
-        DrawText(zadanie.tytul.c_str(), margines + 10, margines + 10, 20, WHITE);
-
-        // Rysowanie opisu zadania
-        int wysokoscLinii = 20; // Odstęp między liniami tekstu
-        for (size_t i = 0; i < zadanie.opis.size(); ++i)
-        {
-            DrawText(zadanie.opis[i].c_str(), margines + 10, margines + 40 + i * wysokoscLinii, 16, WHITE);
-        }
-
-        // Rysowanie szachownicy, przesuniętej w prawo o szerokość pola na tekst + margines
-        narysujSzachowniceFEN(zadanie.fen);
-
-        // Rysowanie przycisku „Powrót”
-        if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
-        {
-            wPoziomie = false;
-        }
-
-        // Rysowanie przycisku „Ustawienia”
-        if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY))
-        {
-            ustawieniaMenu();
-        }
-
-        EndDrawing();
-    }
+// Automatyczne generowanie kolejnych poziomów
+#define GENERUJ_POZIOM(n)                                   \
+void poziom##n() {                                          \
+    Zadanie zadanie = wczytajZadanie("zadania/zadanie " #n ".txt"); \
+    if (zadanie.fen.empty()) {                              \
+        std::cerr << "Nie udało się wczytać zadania!" << std::endl; \
+        return;                                             \
+    }                                                       \
+    inicjalizujSzachownice(zadanie.fen);                    \
+    bool wPoziomie = true;                                  \
+                                                            \
+    while (wPoziomie && !WindowShouldClose()) {             \
+        BeginDrawing();                                     \
+        ClearBackground(kolorTla);                         \
+        obslugaMuzyki();                                    \
+                                                            \
+        int margines = 20;                                  \
+        int szerokoscPola = 200;                            \
+                                                            \
+        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f)); \
+        DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), WHITE); \
+                                                            \
+        DrawText(zadanie.tytul.c_str(), margines + 10, margines + 10, 20, WHITE); \
+        obslugaRuchow(zadanie);                             \
+                                                            \
+        for (size_t i = 0; i < zadanie.opis.size(); ++i) {  \
+            DrawText(zadanie.opis[i].c_str(), margines + 10, margines + 40 + i * 20, 16, WHITE); \
+        }                                                   \
+                                                            \
+        narysujSzachowniceFEN(zadanie.fen);                 \
+                                                            \
+        if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY)) { \
+            wPoziomie = false;                              \
+        }                                                   \
+                                                            \
+        if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY)) { \
+            ustawieniaMenu();                               \
+        }                                                   \
+                                                            \
+        EndDrawing();                                       \
+    }                                                       \
 }
-void poziom3()
-{
-    // Wczytaj zadanie z pliku
-    Zadanie zadanie = wczytajZadanie("zadania/zadanie 3.txt");
-    if (zadanie.fen.empty())
-    {
-        std::cerr << "Nie udalo sie wczytac zadania!" << std::endl;
-        return;
-    }
 
-    bool wPoziomie = true;
+GENERUJ_POZIOM(2)
+GENERUJ_POZIOM(3)
+GENERUJ_POZIOM(4)
+GENERUJ_POZIOM(5)
+GENERUJ_POZIOM(6)
+GENERUJ_POZIOM(7)
+GENERUJ_POZIOM(8)
+GENERUJ_POZIOM(9)
+GENERUJ_POZIOM(10)
+GENERUJ_POZIOM(11)
+GENERUJ_POZIOM(12)
+GENERUJ_POZIOM(13)
+GENERUJ_POZIOM(14)
+GENERUJ_POZIOM(15)
+GENERUJ_POZIOM(16)
+GENERUJ_POZIOM(17)
+GENERUJ_POZIOM(18)
+GENERUJ_POZIOM(19)
+GENERUJ_POZIOM(20)
+GENERUJ_POZIOM(21)
+GENERUJ_POZIOM(22)
+GENERUJ_POZIOM(23)
+GENERUJ_POZIOM(24)
+GENERUJ_POZIOM(25)
+GENERUJ_POZIOM(26)
+GENERUJ_POZIOM(27)
+GENERUJ_POZIOM(28)
+GENERUJ_POZIOM(29)
+GENERUJ_POZIOM(30)
 
-    while (wPoziomie && !WindowShouldClose())
-    {
-        BeginDrawing();
-        ClearBackground(kolorTla);
-        obslugaMuzyki();
-        int margines = 20;
-        int szerokoscPola = 200;
 
-        // Rysowanie przezroczystego pola na informacje
-        DrawRectangle(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), ColorAlpha(DARKGRAY, 0.8f));
-        DrawRectangleLines(margines, margines, szerokoscPola, GetScreenHeight() - (margines * 2), WHITE);
 
-        // Rysowanie tytułu zadania
-        DrawText(zadanie.tytul.c_str(), margines + 10, margines + 10, 20, WHITE);
 
-        // Rysowanie opisu zadania
-        int wysokoscLinii = 20; // Odstęp między liniami tekstu
-        for (size_t i = 0; i < zadanie.opis.size(); ++i)
-        {
-            DrawText(zadanie.opis[i].c_str(), margines + 10, margines + 40 + i * wysokoscLinii, 16, WHITE);
-        }
 
-        // Rysowanie szachownicy, przesuniętej w prawo o szerokość pola na tekst + margines
-        narysujSzachowniceFEN(zadanie.fen);
 
-        // Rysowanie przycisku „Powrót”
-        if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY))
-        {
-            wPoziomie = false;
-        }
-
-        // Rysowanie przycisku „Ustawienia”
-        if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY))
-        {
-            ustawieniaMenu();
-        }
-
-        EndDrawing();
-    }
-}
 
 void wybierzpoziom()
 {
+    // Tablica wskaźników do funkcji poziomów
+    void (*poziomy[30])() = {
+        poziom1, poziom2, poziom3, poziom4, poziom5, poziom6, poziom7, poziom8, poziom9, poziom10,
+        poziom11, poziom12, poziom13, poziom14, poziom15, poziom16, poziom17, poziom18, poziom19, poziom20,
+        poziom21, poziom22, poziom23, poziom24, poziom25, poziom26, poziom27, poziom28, poziom29, poziom30
+    };
+
     bool wMenuWyboruPoziomu = true; // Flaga kontrolująca pozostanie w menu wyboru poziomów
+    int offsetY = 0;                // Przesunięcie pionowe do przewijania poziomów
+    const int maxOffsetY = 0;     // Maksymalne przesunięcie (dla góry listy)
+    const int minOffsetY = -100 * ((30 + 4) / 5 - 3); // Dla 3 widocznych rzędów
 
     while (wMenuWyboruPoziomu && !WindowShouldClose())
     {
-        //obslugaMuzyki();
         obslugaMuzyki();
         BeginDrawing();
         ClearBackground(kolorTla);
 
         DrawText("Wybierz poziom:", szerokoscOkna / 2 - 100, 50, 30, WHITE);
 
-        int liczbaPrzyciskow = 5;  // Liczba dostępnych poziomów (można rozszerzyć)
-        int kolumny = 5;          // Liczba przycisków w rzędzie
+        int liczbaPrzyciskow = 30;  // Liczba dostępnych poziomów
+        int kolumny = 5;           // Liczba przycisków w jednym rzędzie
         int rozmiarPrzycisku = 100;
         int odstep = 20;
 
-        for (int i = 0; i < liczbaPrzyciskow; i++)
-        {
-            int x = (szerokoscOkna / 2 - (rozmiarPrzycisku + odstep) * kolumny / 2) + (i % kolumny) * (rozmiarPrzycisku + odstep);
-            int y = 150;
+        // Rysowanie przycisków poziomów z uwzględnieniem przesunięcia offsetY
+        for (int i = 0; i < liczbaPrzyciskow; i++) {
+            int x = (szerokoscOkna / 2 - (rozmiarPrzycisku + odstep) * kolumny / 2)
+                + (i % kolumny) * (rozmiarPrzycisku + odstep);
+            int y = 150 + (i / kolumny) * (rozmiarPrzycisku + odstep) + offsetY;
 
-            if (rysujPrzycisk(TextFormat("Poziom %d", i + 1), x, y, rozmiarPrzycisku, rozmiarPrzycisku, MAGENTA, DARKPURPLE))
-            {
-                // Wywołanie odpowiedniej funkcji poziomu
-                switch (i)
-                {
-                case 0:
-                    poziom1();
-                    break;
-                case 1:
-                    poziom2();
-                    break;
-                case 2:
-                    poziom3();
-                    break;
+            // Tylko przyciski widoczne na ekranie
+            if (y + rozmiarPrzycisku > 150 && y < GetScreenHeight() - 100) {
+                if (rysujPrzycisk(TextFormat("Poziom %d", i + 1), x, y, rozmiarPrzycisku, rozmiarPrzycisku, MAGENTA, DARKPURPLE)) {
+                    poziomy[i]();
                 }
             }
         }
 
+        // Strzałka przewijania w górę
+        if (rysujPrzycisk("Gora", szerokoscOkna - 120, 10, 100, 40, DARKGRAY, GRAY)) {
+            offsetY += 150; // Przesunięcie o jeden rząd w górę
+            if (offsetY > maxOffsetY) offsetY = maxOffsetY; // Ograniczenie przesunięcia
+        }
+
+        // Strzałka przewijania w dół
+        if (rysujPrzycisk("Dol", szerokoscOkna - 120, GetScreenHeight() - 60, 100, 40, DARKGRAY, GRAY)) {
+            offsetY -= 150; // Przesunięcie o jeden rząd w dół
+            if (offsetY < minOffsetY) offsetY = minOffsetY; // Ograniczenie przesunięcia
+        }
+
         // Dodanie przycisku do powrotu do głównego menu
-        if (rysujPrzycisk("Wroc", szerokoscOkna / 2 - 100, 300, 200, 50, DARKGRAY, GRAY))
+        if (rysujPrzycisk("Wroc", szerokoscOkna / 2 - 100, GetScreenHeight() - 100, 200, 50, DARKGRAY, GRAY))
         {
             wMenuWyboruPoziomu = false; // Wyjście z menu wyboru poziomów
         }
@@ -839,6 +950,65 @@ void wybierzpoziom()
         EndDrawing();
     }
 }
+
+// Funkcja menu głównego
+void menuGlowne()
+{
+    bool wUstawieniach = false;
+    bool wWyborzePoziomow = false;
+    bool wTworcach = false;
+
+    while (!WindowShouldClose())
+    {
+        BeginDrawing();
+        ClearBackground(kolorTla);
+        obslugaMuzyki();
+
+        // Rysowanie przycisków
+        if (rysujPrzycisk("Zadania", szerokoscOkna / 2 - 200, wysokoscOkna / 2 - 300, 400, 100, DARKGRAY, GRAY))
+        {
+            wWyborzePoziomow = true;
+        }
+        if (rysujPrzycisk("Ustawienia", szerokoscOkna / 2 - 100, wysokoscOkna / 2 - 100, 200, 50, DARKGRAY, GRAY))
+        {
+            wUstawieniach = true;
+        }
+        if (rysujPrzycisk("Tworcy", szerokoscOkna / 2 - 100, wysokoscOkna / 2, 200, 50, DARKGRAY, GRAY))
+        {
+            wTworcach = true;
+            //rysujTekstNaSrodku("Paweł Handwerkier", 30, DARKGRAY);
+        }
+        if (rysujPrzycisk("Wyjdz", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 100, 200, 50, DARKGRAY, GRAY))
+        {
+            CloseWindow(); // Wyjście z aplikacji
+        }
+
+        EndDrawing();
+
+        // Jeśli użytkownik wybrał opcję "Ustawienia", wywołujemy odpowiednią funkcję
+        if (wUstawieniach)
+        {
+            ustawieniaMenu();  // Funkcja do wyświetlenia menu ustawień
+            wUstawieniach = false; // Powrót do głównego menu po wyjściu z ustawień
+        }
+        if (wWyborzePoziomow)
+        {
+            wybierzpoziom();
+            wWyborzePoziomow = false;
+        }
+        if (wTworcach)
+        {
+            zobacztworcow();
+            wTworcach = false;
+        }
+    }
+}
+
+
+
+
+
+
 
 
 int main()
@@ -850,10 +1020,10 @@ int main()
     InitAudioDevice();
     ladujMuzyke();
 
- /*   Music muzyka = LoadMusicStream("muzyka/muzyka1.ogg");mllo9 nb
-    PlayMusicStream(muzyka);
-    muzyka.looping = true;
-    */
+    /*   Music muzyka = LoadMusicStream("muzyka/muzyka1.ogg");
+       PlayMusicStream(muzyka);
+       muzyka.looping = true;
+       */
 
     menuGlowne();
 
