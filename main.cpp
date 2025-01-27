@@ -18,6 +18,7 @@ Color kolorPolaJasny = LIGHTGRAY;
 Color kolorPolaCiemny = DARKGRAY;
 int zaznaczonyX = -1, zaznaczonyY = -1;
 bool figuraZaznaczona = false;
+float glosnoscMuzyki = 25.0f; // Domyślna głośność (0-100)
 // Reprezentacja szachownicy jako tablica 8x8
 char szachownica[8][8];
 struct Ruch {
@@ -40,41 +41,66 @@ T Clamp(T value, T min, T max) {
 */
 
 
+
 std::map<char, Texture2D> teksturyFigur;
 
 bool czyBialeNaRuchu = true;
+bool zadanieRozwiazane = false;
+
+
+void odtworzDzwiek(const std::string& nazwaPliku)
+{
+    // Automatyczne dodanie folderu "dzwieki/" do ścieżki
+    std::string sciezkaDoPliku = "dzwieki/" + nazwaPliku;
+
+    // Ładowanie dźwięku z pliku
+    Sound dzwiek = LoadSound(sciezkaDoPliku.c_str());
+
+    if (dzwiek.stream.buffer != nullptr) { // Sprawdzenie, czy dźwięk został poprawnie załadowany
+        PlaySound(dzwiek);                 // Odtwarzanie dźwięku
+        UnloadSound(dzwiek);               // Zwolnienie zasobów po zakończeniu odtwarzania
+    }
+    else {
+        std::cerr << "Nie udało się załadować dźwięku: " << sciezkaDoPliku << std::endl;
+    }
+}
+
+
 
 struct Zadanie {
     string fen;
+    string rozwiazanie;
     string tytul;
     vector<string> opis;
-    bool bialeZaczynaja = true; // Domyślnie białe zaczynają
 };
 
-// Modyfikacja funkcji inicjalizacji zadania
 Zadanie wczytajZadanie(const string& sciezka) {
     Zadanie zadanie;
     ifstream plik(sciezka);
     if (plik.is_open()) {
-        getline(plik, zadanie.fen);
-        getline(plik, zadanie.tytul);
+        getline(plik, zadanie.fen); // Pierwsza linia: FEN
+        getline(plik, zadanie.rozwiazanie); // Druga linia: Rozwiązanie
+        getline(plik, zadanie.tytul); // Trzecia linia: Tytuł
         string linia;
         while (getline(plik, linia)) {
             if (linia == "BIALE") {
-                zadanie.bialeZaczynaja = true;
+                czyBialeNaRuchu = true;
             }
             else if (linia == "CZARNE") {
-                zadanie.bialeZaczynaja = false;
+                czyBialeNaRuchu = false;
             }
-            else {
-                zadanie.opis.push_back(linia);
+            else if (!linia.empty()) {
+                zadanie.opis.push_back(linia); // Dodanie opisu
             }
         }
         plik.close();
-        czyBialeNaRuchu = zadanie.bialeZaczynaja; // Ustawienie kto zaczyna
+    }
+    else {
+        cerr << "Nie udało się otworzyć pliku!" << endl;
     }
     return zadanie;
 }
+
 void rysujTekstNaSrodku(const char* tekst, int rozmiarCzcionki, Color kolor)
 {
     int szerokoscTekstu = MeasureText(tekst, rozmiarCzcionki);
@@ -149,57 +175,50 @@ string konwertujNaFEN() {
     return fen;
 }
 
+
+
+
+
 bool czyFiguraAtakujePole(int startX, int startY, int celX, int celY) {
     char figura = szachownica[startY][startX];
     if (figura == ' ') return false;
 
     // Ruchy pionka
-    if (figura == 'P') { // Biały pionek
-        return (celY == startY - 1 && abs(celX - startX) == 1);
-    }
-    else if (figura == 'p') { // Czarny pionek
-        return (celY == startY + 1 && abs(celX - startX) == 1);
-    }
+    if (figura == 'P') return (celY == startY - 1 && abs(celX - startX) == 1);
+    if (figura == 'p') return (celY == startY + 1 && abs(celX - startX) == 1);
+
     // Ruchy skoczka
-    else if (figura == 'N' || figura == 'n') {
+    if (figura == 'N' || figura == 'n') {
         int dx = abs(celX - startX), dy = abs(celY - startY);
-        return (dx * dx + dy * dy == 5); // Skoczek porusza się w "L"
-    }
-    // Ruchy wieży
-    else if (figura == 'R' || figura == 'r') {
-        if (celX == startX || celY == startY) {
-            int dx = (celX - startX == 0) ? 0 : (celX - startX) / abs(celX - startX);
-            int dy = (celY - startY == 0) ? 0 : (celY - startY) / abs(celY - startY);
-            for (int x = startX + dx, y = startY + dy; x != celX || y != celY; x += dx, y += dy) {
-                if (szachownica[y][x] != ' ') return false;
-            }
-            return true;
-        }
-    }
-    // Ruchy gońca
-    else if (figura == 'B' || figura == 'b') {
-        if (abs(celX - startX) == abs(celY - startY)) {
-            int dx = (celX - startX > 0) ? 1 : -1;
-            int dy = (celY - startY > 0) ? 1 : -1;
-            for (int x = startX + dx, y = startY + dy; x != celX; x += dx, y += dy) {
-                if (szachownica[y][x] != ' ') return false;
-            }
-            return true;
-        }
-    }
-    // Ruchy hetmana
-    else if (figura == 'Q' || figura == 'q') {
-        if (abs(celX - startX) == abs(celY - startY) || celX == startX || celY == startY) {
-            int dx = (celX - startX == 0) ? 0 : (celX - startX) / abs(celX - startX);
-            int dy = (celY - startY == 0) ? 0 : (celY - startY) / abs(celY - startY);
-            for (int x = startX + dx, y = startY + dy; x != celX || y != celY; x += dx, y += dy) {
-                if (szachownica[y][x] != ' ') return false;
-            }
-            return true;
-        }
+        return (dx * dx + dy * dy == 5);
     }
 
-    return false; // Nieznana figura lub brak ataku
+    // Ruchy wieży i gońca - wspólna logika dla hetmana
+    auto drogaCzysta = [](int startX, int startY, int celX, int celY) {
+        int dx = (celX - startX == 0) ? 0 : (celX - startX) / abs(celX - startX);
+        int dy = (celY - startY == 0) ? 0 : (celY - startY) / abs(celY - startY);
+        for (int x = startX + dx, y = startY + dy; x != celX || y != celY; x += dx, y += dy) {
+            if (szachownica[y][x] != ' ') return false;
+        }
+        return true;
+    };
+
+    if (figura == 'R' || figura == 'r') return (startX == celX || startY == celY) && drogaCzysta(startX, startY, celX, celY);
+
+    if (figura == 'B' || figura == 'b') return (abs(celX - startX) == abs(celY - startY)) && drogaCzysta(startX, startY, celX, celY);
+
+    if (figura == 'Q' || figura == 'q') {
+        bool liniaProsta = (startX == celX || startY == celY);
+        bool przekatna = (abs(celX - startX) == abs(celY - startY));
+        return (liniaProsta || przekatna) && drogaCzysta(startX, startY, celX, celY);
+    }
+
+    // Ruchy króla
+    if (figura == 'K' || figura == 'k') {
+        return abs(celX - startX) <= 1 && abs(celY - startY) <= 1;
+    }
+
+    return false;
 }
 
 bool czySzach(bool bialyKrol) {
@@ -218,28 +237,28 @@ bool czySzach(bool bialyKrol) {
         if (krolX != -1) break;
     }
 
-    // Sprawdź, czy jakakolwiek figura przeciwnika atakuje króla
+    // Sprawdź, czy przeciwnik atakuje pole króla
     for (int y = 0; y < 8; y++) {
         for (int x = 0; x < 8; x++) {
             char figura = szachownica[y][x];
-            if (bialyKrol && figura >= 'a' && figura <= 'z') {
-                if (czyFiguraAtakujePole(x, y, krolX, krolY)) {
-                    return true;
-                }
+            if (bialyKrol && figura >= 'a' && figura <= 'z' && czyFiguraAtakujePole(x, y, krolX, krolY)) {
+                return true;
             }
-            else if (!bialyKrol && figura >= 'A' && figura <= 'Z') {
-                if (czyFiguraAtakujePole(x, y, krolX, krolY)) {
-                    return true;
-                }
+            if (!bialyKrol && figura >= 'A' && figura <= 'Z' && czyFiguraAtakujePole(x, y, krolX, krolY)) {
+                return true;
             }
         }
     }
 
-    return false; // Król nie jest zagrożony
+    return false;
 }
 
+int ostatniStartX = -1, ostatniStartY = -1, ostatniCelX = -1, ostatniCelY = -1;
 
 bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
+    bool krolBialyRuszal = false, krolCzarnyRuszal = false;
+    bool wiezaBialaLewyRogRuszal = false, wiezaBialaPrawyRogRuszal = false;
+    bool wiezaCzarnaLewyRogRuszal = false, wiezaCzarnaPrawyRogRuszal = false;
     char figura = szachownica[startY][startX];
     char cel = szachownica[celY][celX];
 
@@ -260,6 +279,7 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
     if ((figuraBiala && celBialy) || (figuraCzarna && celCzarny)) {
         return false; // Nie można bić swojej figury
     }
+
     // Tymczasowy ruch
     szachownica[startY][startX] = ' ';
     szachownica[celY][celX] = figura;
@@ -276,41 +296,71 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
     // Cofnięcie ruchu
     szachownica[startY][startX] = figura;
     szachownica[celY][celX] = cel;
-    // Ruchy pionka
+
+    if (!wynik) return false; // Król nie może być w szachu po ruchu
+
     if (figura == 'P') { // Biały pionek
         if (cel == ' ' && celX == startX && celY == startY - 1) {
+            odtworzDzwiek("move-self.mp3");
             return true; // Ruch o jedno pole do przodu
         }
-        if (cel == ' ' && startY == 6 && celX == startX && celY == startY - 2) {
+        if (cel == ' ' && startY == 6 && celX == startX && celY == startY - 2 && szachownica[startY - 1][startX] == ' ') {
+            odtworzDzwiek("move-self.mp3");
             return true; // Ruch o dwa pola do przodu z pozycji startowej
         }
         if (cel != ' ' && abs(celX - startX) == 1 && celY == startY - 1) {
             return true; // Bicie na ukos
         }
+        // Bicie w przelocie
+        if (cel == ' ' && abs(celX - startX) == 1 && celY == startY - 1) {
+            if (startY == 3 && ostatniStartY == 1 && ostatniCelY == 3 && ostatniCelX == celX) {
+                szachownica[startY][celX] = ' '; // Usuń zbitego pionka przeciwnika
+                return true;
+            }
+        }
     }
     else if (figura == 'p') { // Czarny pionek
         if (cel == ' ' && celX == startX && celY == startY + 1) {
             return true; // Ruch o jedno pole do przodu
+            odtworzDzwiek("move-self.mp3");
         }
-        if (cel == ' ' && startY == 1 && celX == startX && celY == startY + 2) {
+        if (cel == ' ' && startY == 1 && celX == startX && celY == startY + 2 && szachownica[startY + 1][startX] == ' ') {
             return true; // Ruch o dwa pola do przodu z pozycji startowej
+            odtworzDzwiek("move-self.mp3");
         }
         if (cel != ' ' && abs(celX - startX) == 1 && celY == startY + 1) {
             return true; // Bicie na ukos
         }
+        // Bicie w przelocie
+        if (cel == ' ' && abs(celX - startX) == 1 && celY == startY + 1) {
+            if (startY == 4 && ostatniStartY == 6 && ostatniCelY == 4 && ostatniCelX == celX) {
+                szachownica[startY][celX] = ' '; // Usuń zbitego pionka przeciwnika
+                return true;
+            }
+        }
     }
+
+
+
     // Ruchy skoczka
-    else if (figura == 'N' || figura == 'n') { // Biały lub czarny skoczek
+    else if (figura == 'N' || figura == 'n') {
         int dx = abs(celX - startX);
         int dy = abs(celY - startY);
-        if (dx * dx + dy * dy == 5) { // Skoczek porusza się w kształcie litery "L"
+        if (dx * dx + dy * dy == 5) {
+            if (szachownica[celY][celX] == ' ') {
+                odtworzDzwiek("move-self.mp3");
+                cout << "Hop na puste pole." << endl;
+            }
+            else {
+                odtworzDzwiek("capture.mp3");
+                cout << "Bicie" << endl;
+            }
             return true;
         }
     }
     // Ruchy wieży
-    else if (figura == 'R' || figura == 'r') { // Biała lub czarna wieża
-        if (celX == startX || celY == startY) { // Porusza się tylko w pionie lub poziomie
-            // Sprawdzenie przeszkód na drodze
+    else if (figura == 'R' || figura == 'r') {
+        if (celX == startX || celY == startY) {
             int dx = (celX - startX == 0) ? 0 : (celX - startX) / abs(celX - startX);
             int dy = (celY - startY == 0) ? 0 : (celY - startY) / abs(celY - startY);
             int x = startX + dx, y = startY + dy;
@@ -319,12 +369,20 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
                 x += dx;
                 y += dy;
             }
+            if (szachownica[celY][celX] == ' ') {
+                odtworzDzwiek("move-self.mp3");
+                cout << "Hop na puste pole." << endl;
+            }
+            else {
+                odtworzDzwiek("capture.mp3");
+                cout << "bicie" << endl;
+            }
             return true;
         }
     }
     // Ruchy gońca
-    else if (figura == 'B' || figura == 'b') { // Biały lub czarny goniec
-        if (abs(celX - startX) == abs(celY - startY)) { // Porusza się po przekątnych
+    else if (figura == 'B' || figura == 'b') {
+        if (abs(celX - startX) == abs(celY - startY)) {
             int dx = (celX - startX > 0) ? 1 : -1;
             int dy = (celY - startY > 0) ? 1 : -1;
             int x = startX + dx, y = startY + dy;
@@ -333,12 +391,19 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
                 x += dx;
                 y += dy;
             }
+            if (szachownica[celY][celX] == ' ') {
+                odtworzDzwiek("move-self.mp3");
+                cout << "Hop na puste pole." << endl;
+            }
+            else {
+                odtworzDzwiek("capture.mp3");
+                cout << "Bicie" << endl;
+            }
             return true;
         }
     }
     // Ruchy hetmana
-    else if (figura == 'Q' || figura == 'q') { // Biały lub czarny hetman
-        // Hetman łączy ruchy wieży i gońca
+    else if (figura == 'Q' || figura == 'q') {
         if (abs(celX - startX) == abs(celY - startY) || celX == startX || celY == startY) {
             int dx = (celX - startX == 0) ? 0 : (celX - startX) / abs(celX - startX);
             int dy = (celY - startY == 0) ? 0 : (celY - startY) / abs(celY - startY);
@@ -348,69 +413,59 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
                 x += dx;
                 y += dy;
             }
+            if (szachownica[celY][celX] == ' ') {
+                odtworzDzwiek("move-self.mp3");
+                cout << "Hop na puste pole." << endl;
+            }
+            else {
+                odtworzDzwiek("capture.mp3");
+                cout << "Bicie" << endl;
+            }
             return true;
         }
     }
-    if (figura == 'K' || figura == 'k') { // Biały lub czarny król
+    // Ruchy króla
+    else if (figura == 'K') { // Biały król
         if (abs(celX - startX) <= 1 && abs(celY - startY) <= 1) {
-            // Król porusza się o jedno pole w dowolnym kierunku (standardowy ruch)
-            return true;
+            return true; // Standardowy ruch
         }
-
         // Roszada
-        if (startY == celY && (celX == startX + 2 || celX == startX - 2)) {
-            // Sprawdzenie, czy jest roszada (król przesuwa się o dwa pola w poziomie)
-            if (figura == 'K') { // Roszada białego króla
-                if (startX == 4 && (celX == 6 || celX == 2)) {
-                    // Warunki roszady:
-                    // 1. Król nie może się poruszać przez szach
-                    if (czySzach(true)) return false;
-                    // 2. Muszą być puste pola między królem a wieżą
-                    if (celX == 6) { // Król na e1 i wieża na h1
-                        if (szachownica[7][5] != ' ' || szachownica[7][6] != ' ') return false;
-                        if (szachownica[7][7] != 'R') return false; // Wieża na h1
-                        // Przesunięcie wieży
-                        szachownica[7][5] = 'R'; // Wieża przechodzi na f1
-                        szachownica[7][7] = ' '; // Pole h1 jest puste
-                    }
-                    else if (celX == 2) { // Król na e1 i wieża na a1
-                        if (szachownica[7][1] != ' ' || szachownica[7][2] != ' ' || szachownica[7][3] != ' ') return false;
-                        if (szachownica[7][0] != 'R') return false; // Wieża na a1
-                        // Przesunięcie wieży
-                        szachownica[7][3] = 'R'; // Wieża przechodzi na d1
-                        szachownica[7][0] = ' '; // Pole a1 jest puste
-                    }
-                    return true; // Roszada białego króla zakończona
-                }
+        if (!krolBialyRuszal && startY == 7 && celY == 7) {
+            if (celX == 6 && !wiezaBialaPrawyRogRuszal && szachownica[7][5] == ' ' && szachownica[7][6] == ' ') {
+                szachownica[7][5] = 'R'; // Przesuń wieżę
+                szachownica[7][7] = ' '; // Usuń starą pozycję wieży
+                return true;
             }
-            else if (figura == 'k') { // Roszada czarnego króla
-                if (startX == 4 && (celX == 6 || celX == 2)) {
-                    // Warunki roszady:
-                    // 1. Król nie może się poruszać przez szach
-                    if (czySzach(false)) return false;
-                    // 2. Muszą być puste pola między królem a wieżą
-                    if (celX == 6) { // Król na e8 i wieża na h8
-                        if (szachownica[0][5] != ' ' || szachownica[0][6] != ' ') return false;
-                        if (szachownica[0][7] != 'r') return false; // Wieża na h8
-                        // Przesunięcie wieży
-                        szachownica[0][5] = 'r'; // Wieża przechodzi na f8
-                        szachownica[0][7] = ' '; // Pole h8 jest puste
-                    }
-                    else if (celX == 2) { // Król na e8 i wieża na a8
-                        if (szachownica[0][1] != ' ' || szachownica[0][2] != ' ' || szachownica[0][3] != ' ') return false;
-                        if (szachownica[0][0] != 'r') return false; // Wieża na a8
-                        // Przesunięcie wieży
-                        szachownica[0][3] = 'r'; // Wieża przechodzi na d8
-                        szachownica[0][0] = ' '; // Pole a8 jest puste
-                    }
-                    return true; // Roszada czarnego króla zakończona
-                }
+            if (celX == 2 && !wiezaBialaLewyRogRuszal && szachownica[7][1] == ' ' && szachownica[7][2] == ' ' && szachownica[7][3] == ' ') {
+                szachownica[7][3] = 'R'; // Przesuń wieżę
+                szachownica[7][0] = ' '; // Usuń starą pozycję wieży
+                return true;
+            }
+        }
+    }
+    else if (figura == 'k') { // Czarny król
+        if (abs(celX - startX) <= 1 && abs(celY - startY) <= 1) {
+            return true; // Standardowy ruch
+        }
+        // Roszada
+        if (!krolCzarnyRuszal && startY == 0 && celY == 0) {
+            if (celX == 6 && !wiezaCzarnaPrawyRogRuszal && szachownica[0][5] == ' ' && szachownica[0][6] == ' ') {
+                szachownica[0][5] = 'r'; // Przesuń wieżę
+                szachownica[0][7] = ' '; // Usuń starą pozycję wieży
+                return true;
+            }
+            if (celX == 2 && !wiezaCzarnaLewyRogRuszal && szachownica[0][1] == ' ' && szachownica[0][2] == ' ' && szachownica[0][3] == ' ') {
+                szachownica[0][3] = 'r'; // Przesuń wieżę
+                szachownica[0][0] = ' '; // Usuń starą pozycję wieży
+                return true;
             }
         }
     }
 
-    return false; // Domyślnie ruch nie jest poprawny
+
+    return false; // Nieznana figura lub brak ataku
 }
+
 
 
 void wypiszSzachownice() {
@@ -457,7 +512,18 @@ void obslugaRuchow(Zadanie& zadanie) {
                     szachownica[zaznaczonyY][zaznaczonyX] = ' ';
                     zadanie.fen = konwertujNaFEN(); // Aktualizuj FEN
                     czyBialeNaRuchu = !czyBialeNaRuchu; // Zmiana tury
+                    ostatniStartX = zaznaczonyX;
+                    ostatniStartY = zaznaczonyY;
+                    ostatniCelX = x;
+                    ostatniCelY = y;
                     cout << "Ruch wykonany. Nowy FEN: " << zadanie.fen << endl;
+                    cout << "poprawne rozwiazanie: " << zadanie.rozwiazanie << endl;
+
+                    if (zadanie.rozwiazanie == zadanie.fen) {
+                        cout << "zadanie rozwiazane" << endl;
+                        zadanieRozwiazane = true; // Zmień stan na "rozwiązane"
+                    }
+
                 }
                 else {
                     cout << "Niepoprawny ruch!" << endl;
@@ -484,6 +550,19 @@ void narysujSzachowniceFEN(const string& fen) {
             DrawRectangle(startX + x * poleRozmiar, startY + y * poleRozmiar, poleRozmiar, poleRozmiar, kolorPola);
         }
     }
+
+    // Rysowanie zaznaczonego pola, jeśli figura jest zaznaczona
+    if (figuraZaznaczona) {
+        int zaznaczonePoleX = startX + zaznaczonyX * poleRozmiar;
+        int zaznaczonePoleY = startY + zaznaczonyY * poleRozmiar;
+        int gruboscObrysu = 4; // Grubość obrysu
+        DrawRectangleLinesEx(
+            { static_cast<float>(zaznaczonePoleX), static_cast<float>(zaznaczonePoleY),
+              static_cast<float>(poleRozmiar), static_cast<float>(poleRozmiar) },
+            gruboscObrysu, RED
+        );
+    }
+
 
     int x = 0, y = 0;
     for (char c : fen) {
@@ -529,17 +608,29 @@ bool rysujPrzycisk(const char* tekst, int x, int y, int szerokosc, int wysokosc,
     Rectangle przyciskRect = { (float)x, (float)y, (float)szerokosc, (float)wysokosc };
     bool nadPrzyciskiem = CheckCollisionPointRec(GetMousePosition(), przyciskRect);
     Color kolorPrzycisku = nadPrzyciskiem ? kolorklikniecia : kolorprzycisku;
+
+    // Rysowanie prostokąta przycisku
     DrawRectangleRec(przyciskRect, kolorPrzycisku);
-    DrawText(tekst, x + 20, y + 10, 20, RAYWHITE);
+
+    // Obliczenie pozycji tekstu na środku
+    int rozmiarCzcionki = 20;
+    int tekstSzerokosc = MeasureText(tekst, rozmiarCzcionki);
+    int tekstWysokosc = rozmiarCzcionki; // Wysokość tekstu jest w przybliżeniu równa rozmiarowi czcionki
+    int tekstX = x + (szerokosc - tekstSzerokosc) / 2;
+    int tekstY = y + (wysokosc - tekstWysokosc) / 2;
+
+    // Rysowanie tekstu na środku przycisku
+    DrawText(tekst, tekstX, tekstY, rozmiarCzcionki, RAYWHITE);
+
     return nadPrzyciskiem && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
 }
+
 
 //MUZYKA
 
 vector<Music> muzyka; // Wektor przechowujący różne utwory
 int aktualnyUtwor = 0;     // Indeks aktualnie odtwarzanego utworu
 bool muzykaOdtwarzana = true; // Flaga kontrolująca odtwarzanie muzyki
-float glosnoscMuzyki = 50.0f; // Domyślna głośność (0-100)
 
 void ladujMuzyke() {
     muzyka.clear();
@@ -622,7 +713,6 @@ void zobacztworcow()
 void ustawieniaMenu()
 {
     bool wMenu = true;
-    int glosnoscMuzyki = 50;
     bool pelnyEkran = false;
 
     // Zmienne przechowujące obecne wybory koloru tła i koloru pól
@@ -646,19 +736,19 @@ void ustawieniaMenu()
             Vector2 mousePos = GetMousePosition();
             if (mousePos.x >= suwakX && mousePos.x <= suwakX + suwakSzerokosc &&
                 mousePos.y >= suwakY && mousePos.y <= suwakY + 20) {
-                glosnoscMuzyki = ((mousePos.x - suwakX) / suwakSzerokosc) * 100.0f;
-                //glosnoscMuzyki = Clamp(glosnoscMuzyki, 0.0f, 100.0f); // Utrzymuj wartość w zakresie 0-100
+                glosnoscMuzyki = ((mousePos.x - suwakX) / suwakSzerokosc) * 50.0f;
+                //glosnoscMuzyki = Clamp(glosnoscMuzyki, 0.0f, 100.0f); // Utrzymuj wartość w zakresie 0-50
                 if (glosnoscMuzyki <= 0.0f) glosnoscMuzyki = 0.0f;
-                if (glosnoscMuzyki >= 100.0f) glosnoscMuzyki = 100.0f;
+                if (glosnoscMuzyki >= 50.0f) glosnoscMuzyki = 50.0f;
                 if (aktualnyUtwor >= 0 && aktualnyUtwor < muzyka.size()) {
-                    SetMusicVolume(muzyka[aktualnyUtwor], glosnoscMuzyki / 100.0f);
+                    SetMusicVolume(muzyka[aktualnyUtwor], glosnoscMuzyki / 50.0f);
                 }
             }
         }
 
         // Rysowanie tła suwaka i wskaźnika
         DrawRectangle(suwakX, suwakY, suwakSzerokosc, 20, LIGHTGRAY);
-        DrawRectangle(suwakX + (glosnoscMuzyki / 100.0f) * suwakSzerokosc - 5, suwakY - 5, 10, 30, RED);
+        DrawRectangle(suwakX + (glosnoscMuzyki / 50.0f) * suwakSzerokosc - 5, suwakY - 5, 10, 30, RED);
 
         // Wyświetlenie wartości głośności
         DrawText(TextFormat("%i", (int)glosnoscMuzyki), suwakX + suwakSzerokosc + 100, suwakY - 5, 20, WHITE);
@@ -769,6 +859,7 @@ void ustawieniaMenu()
     }
 }
 // Funkcje poziomów
+
 void poziom1() {
     Zadanie zadanie = wczytajZadanie("zadania/zadanie 1.txt");
     if (zadanie.fen.empty()) {
@@ -777,6 +868,7 @@ void poziom1() {
     }
     inicjalizujSzachownice(zadanie.fen);
     bool wPoziomie = true;
+    zadanieRozwiazane = false;
 
     while (wPoziomie && !WindowShouldClose()) {
         BeginDrawing();
@@ -797,6 +889,9 @@ void poziom1() {
         }
 
         narysujSzachowniceFEN(zadanie.fen); // Rysowanie szachownicy z aktualnym FEN
+        if (zadanieRozwiazane) {
+            DrawText("ZADANIE ROZWIAZANE!", 400, 10, 40, PINK); // Rysuj tekst
+        }
 
         if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY)) {
             wPoziomie = false;
@@ -819,6 +914,7 @@ void poziom##n() {                                          \
     }                                                       \
     inicjalizujSzachownice(zadanie.fen);                    \
     bool wPoziomie = true;                                  \
+    zadanieRozwiazane = false;                              \
                                                             \
     while (wPoziomie && !WindowShouldClose()) {             \
         BeginDrawing();                                     \
@@ -839,6 +935,9 @@ void poziom##n() {                                          \
         }                                                   \
                                                             \
         narysujSzachowniceFEN(zadanie.fen);                 \
+        if (zadanieRozwiazane) {        \
+         DrawText("ZADANIE ROZWIAZANE!", 400, 10, 40, PINK); \
+         }                                                  \
                                                             \
         if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY)) { \
             wPoziomie = false;                              \
@@ -957,6 +1056,7 @@ void menuGlowne()
     bool wUstawieniach = false;
     bool wWyborzePoziomow = false;
     bool wTworcach = false;
+    bool zwyklaszachownica = false;
 
     while (!WindowShouldClose())
     {
@@ -969,16 +1069,20 @@ void menuGlowne()
         {
             wWyborzePoziomow = true;
         }
-        if (rysujPrzycisk("Ustawienia", szerokoscOkna / 2 - 100, wysokoscOkna / 2 - 100, 200, 50, DARKGRAY, GRAY))
+        if (rysujPrzycisk("Graj lokalnie", szerokoscOkna / 2 - 150, wysokoscOkna / 2 - 175, 300, 75, DARKGRAY, GRAY))
+        {
+            wWyborzePoziomow = true;
+        }
+        if (rysujPrzycisk("Ustawienia", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 50, 200, 50, DARKGRAY, GRAY))
         {
             wUstawieniach = true;
         }
-        if (rysujPrzycisk("Tworcy", szerokoscOkna / 2 - 100, wysokoscOkna / 2, 200, 50, DARKGRAY, GRAY))
+        if (rysujPrzycisk("Tworcy", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 125 , 200, 50, DARKGRAY, GRAY))
         {
             wTworcach = true;
             //rysujTekstNaSrodku("Paweł Handwerkier", 30, DARKGRAY);
         }
-        if (rysujPrzycisk("Wyjdz", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 100, 200, 50, DARKGRAY, GRAY))
+        if (rysujPrzycisk("Wyjdz", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 200, 200, 50, DARKGRAY, GRAY))
         {
             CloseWindow(); // Wyjście z aplikacji
         }
