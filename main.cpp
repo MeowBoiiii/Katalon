@@ -18,7 +18,7 @@ Color kolorPolaJasny = LIGHTGRAY;
 Color kolorPolaCiemny = DARKGRAY;
 int zaznaczonyX = -1, zaznaczonyY = -1;
 bool figuraZaznaczona = false;
-float glosnoscMuzyki = 25.0f; // Domyślna głośność (0-100)
+float glosnoscMuzyki = 0.25f; // Domyślna głośność (0-100)
 // Reprezentacja szachownicy jako tablica 8x8
 char szachownica[8][8];
 struct Ruch {
@@ -48,22 +48,23 @@ bool czyBialeNaRuchu = true;
 bool zadanieRozwiazane = false;
 
 
-void odtworzDzwiek(const std::string& nazwaPliku)
-{
-    // Automatyczne dodanie folderu "dzwieki/" do ścieżki
+void odtworzDzwiek(const std::string& nazwaPliku) {
     std::string sciezkaDoPliku = "dzwieki/" + nazwaPliku;
-
-    // Ładowanie dźwięku z pliku
     Sound dzwiek = LoadSound(sciezkaDoPliku.c_str());
 
-    if (dzwiek.stream.buffer != nullptr) { // Sprawdzenie, czy dźwięk został poprawnie załadowany
-        PlaySound(dzwiek);                 // Odtwarzanie dźwięku
-        UnloadSound(dzwiek);               // Zwolnienie zasobów po zakończeniu odtwarzania
+    if (dzwiek.stream.buffer != nullptr) {
+        PlaySound(dzwiek);
+        while (IsSoundPlaying(dzwiek)) {
+            // Poczekaj, aż dźwięk przestanie być odtwarzany
+        }
+        UnloadSound(dzwiek); // Zwolnienie zasobów po zakończeniu odtwarzania
+        cout << "Dźwięk odtworzony" << endl;
     }
     else {
         std::cerr << "Nie udało się załadować dźwięku: " << sciezkaDoPliku << std::endl;
     }
 }
+
 
 
 
@@ -314,6 +315,8 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
         // Bicie w przelocie
         if (cel == ' ' && abs(celX - startX) == 1 && celY == startY - 1) {
             if (startY == 3 && ostatniStartY == 1 && ostatniCelY == 3 && ostatniCelX == celX) {
+                odtworzDzwiek("capture.mp3");
+                cout << "Bicie" << endl;
                 szachownica[startY][celX] = ' '; // Usuń zbitego pionka przeciwnika
                 return true;
             }
@@ -329,11 +332,15 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
             odtworzDzwiek("move-self.mp3");
         }
         if (cel != ' ' && abs(celX - startX) == 1 && celY == startY + 1) {
+            odtworzDzwiek("capture.mp3");
+            cout << "Bicie" << endl;
             return true; // Bicie na ukos
         }
         // Bicie w przelocie
         if (cel == ' ' && abs(celX - startX) == 1 && celY == startY + 1) {
             if (startY == 4 && ostatniStartY == 6 && ostatniCelY == 4 && ostatniCelX == celX) {
+                odtworzDzwiek("capture.mp3");
+                cout << "Bicie" << endl;
                 szachownica[startY][celX] = ' '; // Usuń zbitego pionka przeciwnika
                 return true;
             }
@@ -432,11 +439,15 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
         // Roszada
         if (!krolBialyRuszal && startY == 7 && celY == 7) {
             if (celX == 6 && !wiezaBialaPrawyRogRuszal && szachownica[7][5] == ' ' && szachownica[7][6] == ' ') {
+                odtworzDzwiek("castle.mp3");
+                cout << "roszada" << endl;
                 szachownica[7][5] = 'R'; // Przesuń wieżę
                 szachownica[7][7] = ' '; // Usuń starą pozycję wieży
                 return true;
             }
             if (celX == 2 && !wiezaBialaLewyRogRuszal && szachownica[7][1] == ' ' && szachownica[7][2] == ' ' && szachownica[7][3] == ' ') {
+                odtworzDzwiek("castle.mp3");
+                cout << "roszada" << endl;
                 szachownica[7][3] = 'R'; // Przesuń wieżę
                 szachownica[7][0] = ' '; // Usuń starą pozycję wieży
                 return true;
@@ -450,11 +461,15 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
         // Roszada
         if (!krolCzarnyRuszal && startY == 0 && celY == 0) {
             if (celX == 6 && !wiezaCzarnaPrawyRogRuszal && szachownica[0][5] == ' ' && szachownica[0][6] == ' ') {
+                odtworzDzwiek("castle.mp3");
+                cout << "roszada" << endl;
                 szachownica[0][5] = 'r'; // Przesuń wieżę
                 szachownica[0][7] = ' '; // Usuń starą pozycję wieży
                 return true;
             }
             if (celX == 2 && !wiezaCzarnaLewyRogRuszal && szachownica[0][1] == ' ' && szachownica[0][2] == ' ' && szachownica[0][3] == ' ') {
+                odtworzDzwiek("castle.mp3");
+                cout << "roszada" << endl;
                 szachownica[0][3] = 'r'; // Przesuń wieżę
                 szachownica[0][0] = ' '; // Usuń starą pozycję wieży
                 return true;
@@ -462,7 +477,8 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
         }
     }
 
-
+    odtworzDzwiek("illegal.mp3");
+    cout << "roszada" << endl;
     return false; // Nieznana figura lub brak ataku
 }
 
@@ -521,6 +537,8 @@ void obslugaRuchow(Zadanie& zadanie) {
 
                     if (zadanie.rozwiazanie == zadanie.fen) {
                         cout << "zadanie rozwiazane" << endl;
+                        odtworzDzwiek("correct.mp3");
+                        cout << "poprawne rozwiązanie" << endl;
                         zadanieRozwiazane = true; // Zmień stan na "rozwiązane"
                     }
 
@@ -726,32 +744,48 @@ void ustawieniaMenu()
         ClearBackground(kolorTla);
 
         // Rysowanie suwaka głośności
+        // Rysowanie suwaka głośności
         DrawText("Glosnosc Muzyki:", 200, 50, 20, WHITE);
-        float suwakX = 400; // Pozycja X suwaka
-        float suwakY = 50; // Pozycja Y suwaka
-        float suwakSzerokosc = 300; // Szerokość suwaka
+
+        float suwakX = 400;           // Pozycja X suwaka
+        float suwakY = 50;            // Pozycja Y suwaka
+        float suwakSzerokosc = 300;   // Szerokość suwaka
+        float suwakWysokosc = 20;     // Wysokość suwaka
 
         // Obsługa myszy dla zmiany głośności
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             Vector2 mousePos = GetMousePosition();
+
+            // Sprawdź, czy kursor znajduje się nad suwakiem
             if (mousePos.x >= suwakX && mousePos.x <= suwakX + suwakSzerokosc &&
-                mousePos.y >= suwakY && mousePos.y <= suwakY + 20) {
-                glosnoscMuzyki = ((mousePos.x - suwakX) / suwakSzerokosc) * 50.0f;
-                //glosnoscMuzyki = Clamp(glosnoscMuzyki, 0.0f, 100.0f); // Utrzymuj wartość w zakresie 0-50
-                if (glosnoscMuzyki <= 0.0f) glosnoscMuzyki = 0.0f;
-                if (glosnoscMuzyki >= 50.0f) glosnoscMuzyki = 50.0f;
+                mousePos.y >= suwakY && mousePos.y <= suwakY + suwakWysokosc) {
+
+                // Przelicz pozycję myszy na zakres głośności (0.0f - 0.5f)
+                glosnoscMuzyki = (mousePos.x - suwakX) / suwakSzerokosc * 0.5f;
+
+                // Ręczne ograniczenie zakresu głośności
+                if (glosnoscMuzyki < 0.0f) glosnoscMuzyki = 0.0f;
+                if (glosnoscMuzyki > 0.5f) glosnoscMuzyki = 0.5f;
+
+                // Ustaw głośność dla aktualnego utworu
                 if (aktualnyUtwor >= 0 && aktualnyUtwor < muzyka.size()) {
-                    SetMusicVolume(muzyka[aktualnyUtwor], glosnoscMuzyki / 50.0f);
+                    SetMusicVolume(muzyka[aktualnyUtwor], glosnoscMuzyki * 2.0f); // Skala Raylib wynosi od 0.0f do 1.0f
                 }
             }
         }
 
-        // Rysowanie tła suwaka i wskaźnika
-        DrawRectangle(suwakX, suwakY, suwakSzerokosc, 20, LIGHTGRAY);
-        DrawRectangle(suwakX + (glosnoscMuzyki / 50.0f) * suwakSzerokosc - 5, suwakY - 5, 10, 30, RED);
+        // Rysowanie tła suwaka
+        DrawRectangle(suwakX, suwakY, suwakSzerokosc, suwakWysokosc, LIGHTGRAY);
 
-        // Wyświetlenie wartości głośności
-        DrawText(TextFormat("%i", (int)glosnoscMuzyki), suwakX + suwakSzerokosc + 100, suwakY - 5, 20, WHITE);
+        // Obliczenie pozycji wskaźnika suwaka
+        float wskaznikX = suwakX + (glosnoscMuzyki / 0.5f) * suwakSzerokosc;
+
+        // Rysowanie wskaźnika suwaka
+        DrawRectangle(wskaznikX - 5, suwakY - 5, 10, suwakWysokosc + 10, RED);
+
+        // Wyświetlenie wartości głośności w procentach
+        DrawText(TextFormat("%i%%", (int)(glosnoscMuzyki * 200)), suwakX + suwakSzerokosc + 20, suwakY, 20, WHITE);
+
 
         if (rysujPrzycisk("Nastepny utwor", suwakX + suwakSzerokosc + 20, suwakY - 10, 200, 50, DARKGRAY, GRAY)) {
             if (!muzyka.empty()) {
@@ -1089,8 +1123,7 @@ void menuGlowne()
 
         EndDrawing();
 
-        // Jeśli użytkownik wybrał opcję "Ustawienia", wywołujemy odpowiednią funkcję
-        if (wUstawieniach)
+        // Jeśli użytkownik wybrał opcję "Ustawienia", wywołujemy odpowiednią funkc        if (wUstawieniach)
         {
             ustawieniaMenu();  // Funkcja do wyświetlenia menu ustawień
             wUstawieniach = false; // Powrót do głównego menu po wyjściu z ustawień
