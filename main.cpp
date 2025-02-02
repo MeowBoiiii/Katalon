@@ -18,7 +18,7 @@ Color kolorPolaJasny = LIGHTGRAY;
 Color kolorPolaCiemny = DARKGRAY;
 int zaznaczonyX = -1, zaznaczonyY = -1;
 bool figuraZaznaczona = false;
-float glosnoscMuzyki = 0.25f; // Domyślna głośność (0-100)
+float glosnoscMuzyki = 25.0f; // Domyślna głośność (0-100)
 // Reprezentacja szachownicy jako tablica 8x8
 char szachownica[8][8];
 struct Ruch {
@@ -64,7 +64,6 @@ void odtworzDzwiek(const std::string& nazwaPliku) {
         std::cerr << "Nie udało się załadować dźwięku: " << sciezkaDoPliku << std::endl;
     }
 }
-
 
 
 
@@ -202,7 +201,7 @@ bool czyFiguraAtakujePole(int startX, int startY, int celX, int celY) {
             if (szachownica[y][x] != ' ') return false;
         }
         return true;
-    };
+        };
 
     if (figura == 'R' || figura == 'r') return (startX == celX || startY == celY) && drogaCzysta(startX, startY, celX, celY);
 
@@ -243,9 +242,11 @@ bool czySzach(bool bialyKrol) {
         for (int x = 0; x < 8; x++) {
             char figura = szachownica[y][x];
             if (bialyKrol && figura >= 'a' && figura <= 'z' && czyFiguraAtakujePole(x, y, krolX, krolY)) {
+                odtworzDzwiek("illegal.mp3");
                 return true;
             }
             if (!bialyKrol && figura >= 'A' && figura <= 'Z' && czyFiguraAtakujePole(x, y, krolX, krolY)) {
+                odtworzDzwiek("illegal.mp3");
                 return true;
             }
         }
@@ -265,9 +266,11 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
 
     // Sprawdzenie podstawowe: cel musi znajdować się w granicach szachownicy i nie może być na miejscu startowym
     if (celX < 0 || celX >= 8 || celY < 0 || celY >= 8) {
+        odtworzDzwiek("incorrect.mp3");
         return false;
     }
     if (startX == celX && startY == celY) {
+        odtworzDzwiek("incorrect.mp3");
         return false;
     }
 
@@ -278,6 +281,7 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
     bool celCzarny = (cel >= 'a' && cel <= 'z');
 
     if ((figuraBiala && celBialy) || (figuraCzarna && celCzarny)) {
+        odtworzDzwiek("incorrect.mp3");
         return false; // Nie można bić swojej figury
     }
 
@@ -310,6 +314,8 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
             return true; // Ruch o dwa pola do przodu z pozycji startowej
         }
         if (cel != ' ' && abs(celX - startX) == 1 && celY == startY - 1) {
+            odtworzDzwiek("capture.mp3");
+            cout << "Bicie" << endl;
             return true; // Bicie na ukos
         }
         // Bicie w przelocie
@@ -333,14 +339,14 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
         }
         if (cel != ' ' && abs(celX - startX) == 1 && celY == startY + 1) {
             odtworzDzwiek("capture.mp3");
-            cout << "Bicie" << endl;
+            std::cout << "Bicie" << endl;
             return true; // Bicie na ukos
         }
         // Bicie w przelocie
         if (cel == ' ' && abs(celX - startX) == 1 && celY == startY + 1) {
             if (startY == 4 && ostatniStartY == 6 && ostatniCelY == 4 && ostatniCelX == celX) {
                 odtworzDzwiek("capture.mp3");
-                cout << "Bicie" << endl;
+                std::cout << "Bicie" << endl;
                 szachownica[startY][celX] = ' '; // Usuń zbitego pionka przeciwnika
                 return true;
             }
@@ -356,7 +362,7 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
         if (dx * dx + dy * dy == 5) {
             if (szachownica[celY][celX] == ' ') {
                 odtworzDzwiek("move-self.mp3");
-                cout << "Hop na puste pole." << endl;
+                std::cout << "Hop na puste pole." << endl;
             }
             else {
                 odtworzDzwiek("capture.mp3");
@@ -434,6 +440,14 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
     // Ruchy króla
     else if (figura == 'K') { // Biały król
         if (abs(celX - startX) <= 1 && abs(celY - startY) <= 1) {
+            if (szachownica[celY][celX] == ' ') {
+                odtworzDzwiek("move-self.mp3");
+                cout << "Hop na puste pole." << endl;
+            }
+            else {
+                odtworzDzwiek("capture.mp3");
+                cout << "Bicie" << endl;
+            }
             return true; // Standardowy ruch
         }
         // Roszada
@@ -456,6 +470,14 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
     }
     else if (figura == 'k') { // Czarny król
         if (abs(celX - startX) <= 1 && abs(celY - startY) <= 1) {
+            if (szachownica[celY][celX] == ' ') {
+                odtworzDzwiek("move-self.mp3");
+                cout << "Hop na puste pole." << endl;
+            }
+            else {
+                odtworzDzwiek("capture.mp3");
+                cout << "Bicie" << endl;
+            }
             return true; // Standardowy ruch
         }
         // Roszada
@@ -477,22 +499,11 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
         }
     }
 
-    odtworzDzwiek("illegal.mp3");
+    odtworzDzwiek("incorrect.mp3");
     cout << "roszada" << endl;
     return false; // Nieznana figura lub brak ataku
 }
 
-
-
-void wypiszSzachownice() {
-    for (int y = 0; y < 8; ++y) {
-        for (int x = 0; x < 8; ++x) {
-            cout << szachownica[y][x] << " ";
-        }
-        cout << endl;
-    }
-    cout << "-----------------" << endl;
-}
 
 // Modyfikacja funkcji obslugaRuchow
 void obslugaRuchow(Zadanie& zadanie) {
@@ -536,9 +547,8 @@ void obslugaRuchow(Zadanie& zadanie) {
                     cout << "poprawne rozwiazanie: " << zadanie.rozwiazanie << endl;
 
                     if (zadanie.rozwiazanie == zadanie.fen) {
-                        cout << "zadanie rozwiazane" << endl;
                         odtworzDzwiek("correct.mp3");
-                        cout << "poprawne rozwiązanie" << endl;
+                        cout << "zadanie rozwiazane" << endl;
                         zadanieRozwiazane = true; // Zmień stan na "rozwiązane"
                     }
 
@@ -552,7 +562,54 @@ void obslugaRuchow(Zadanie& zadanie) {
     }
 }
 
+void obslugaRuchow2(string fen) {
+    int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8;
+    int startX = (GetScreenWidth() - szerokoscSzachownicy) / 2;
+    int startY = (GetScreenHeight() - szerokoscSzachownicy) / 2;
+    int poleRozmiar = szerokoscSzachownicy / ROZMIAR_SZACHOWNICY;
 
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Vector2 pozycjaMyszy = GetMousePosition();
+        int x = (pozycjaMyszy.x - startX) / poleRozmiar;
+        int y = (pozycjaMyszy.y - startY) / poleRozmiar;
+
+        if (x >= 0 && x < 8 && y >= 0 && y < 8) { // Kliknięcie w granicach szachownicy
+            if (!figuraZaznaczona) {
+                if (szachownica[y][x] != ' ') { // Zaznacz figurę
+                    bool bialeFigura = isupper(szachownica[y][x]);
+                    if (czyBialeNaRuchu == bialeFigura) { // Sprawdzanie ruchu właściwego gracza
+                        zaznaczonyX = x;
+                        zaznaczonyY = y;
+                        figuraZaznaczona = true;
+                        cout << "Zaznaczono figure: " << szachownica[y][x] << " na (" << x << ", " << y << ")" << endl;
+                    }
+                    else {
+                        cout << "Nie mozesz wykonac ruchu ta figura!" << endl;
+                    }
+                }
+            }
+            else {
+                cout << "Proba ruchu z (" << zaznaczonyX << ", " << zaznaczonyY << ") na (" << x << ", " << y << ")" << endl;
+                if (czyRuchPoprawny(zaznaczonyX, zaznaczonyY, x, y)) {
+                    szachownica[y][x] = szachownica[zaznaczonyY][zaznaczonyX];
+                    szachownica[zaznaczonyY][zaznaczonyX] = ' ';
+                    fen = konwertujNaFEN(); // Aktualizuj FEN
+                    czyBialeNaRuchu = !czyBialeNaRuchu; // Zmiana tury
+                    ostatniStartX = zaznaczonyX;
+                    ostatniStartY = zaznaczonyY;
+                    ostatniCelX = x;
+                    ostatniCelY = y;
+                    cout << "Ruch wykonany. Nowy FEN: " << fen << endl;
+
+                }
+                else {
+                    cout << "Niepoprawny ruch!" << endl;
+                }
+                figuraZaznaczona = false;
+            }
+        }
+    }
+}
 
 
 
@@ -640,8 +697,15 @@ bool rysujPrzycisk(const char* tekst, int x, int y, int szerokosc, int wysokosc,
     // Rysowanie tekstu na środku przycisku
     DrawText(tekst, tekstX, tekstY, rozmiarCzcionki, RAYWHITE);
 
-    return nadPrzyciskiem && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+    // Sprawdzenie kliknięcia i odtworzenie dźwięku
+    if (nadPrzyciskiem && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+        odtworzDzwiek("click.mp3"); // Odtwórz dźwięk kliknięcia
+        return true;
+    }
+
+    return false;
 }
+
 
 
 //MUZYKA
@@ -744,48 +808,32 @@ void ustawieniaMenu()
         ClearBackground(kolorTla);
 
         // Rysowanie suwaka głośności
-        // Rysowanie suwaka głośności
         DrawText("Glosnosc Muzyki:", 200, 50, 20, WHITE);
-
-        float suwakX = 400;           // Pozycja X suwaka
-        float suwakY = 50;            // Pozycja Y suwaka
-        float suwakSzerokosc = 300;   // Szerokość suwaka
-        float suwakWysokosc = 20;     // Wysokość suwaka
+        float suwakX = 400; // Pozycja X suwaka
+        float suwakY = 50; // Pozycja Y suwaka
+        float suwakSzerokosc = 300; // Szerokość suwaka
 
         // Obsługa myszy dla zmiany głośności
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
             Vector2 mousePos = GetMousePosition();
-
-            // Sprawdź, czy kursor znajduje się nad suwakiem
             if (mousePos.x >= suwakX && mousePos.x <= suwakX + suwakSzerokosc &&
-                mousePos.y >= suwakY && mousePos.y <= suwakY + suwakWysokosc) {
-
-                // Przelicz pozycję myszy na zakres głośności (0.0f - 0.5f)
-                glosnoscMuzyki = (mousePos.x - suwakX) / suwakSzerokosc * 0.5f;
-
-                // Ręczne ograniczenie zakresu głośności
-                if (glosnoscMuzyki < 0.0f) glosnoscMuzyki = 0.0f;
-                if (glosnoscMuzyki > 0.5f) glosnoscMuzyki = 0.5f;
-
-                // Ustaw głośność dla aktualnego utworu
+                mousePos.y >= suwakY && mousePos.y <= suwakY + 20) {
+                glosnoscMuzyki = ((mousePos.x - suwakX) / suwakSzerokosc) * 50.0f;
+                //glosnoscMuzyki = Clamp(glosnoscMuzyki, 0.0f, 100.0f); // Utrzymuj wartość w zakresie 0-50
+                if (glosnoscMuzyki <= 0.0f) glosnoscMuzyki = 0.0f;
+                if (glosnoscMuzyki >= 50.0f) glosnoscMuzyki = 50.0f;
                 if (aktualnyUtwor >= 0 && aktualnyUtwor < muzyka.size()) {
-                    SetMusicVolume(muzyka[aktualnyUtwor], glosnoscMuzyki * 2.0f); // Skala Raylib wynosi od 0.0f do 1.0f
+                    SetMusicVolume(muzyka[aktualnyUtwor], glosnoscMuzyki / 50.0f);
                 }
             }
         }
 
-        // Rysowanie tła suwaka
-        DrawRectangle(suwakX, suwakY, suwakSzerokosc, suwakWysokosc, LIGHTGRAY);
+        // Rysowanie tła suwaka i wskaźnika
+        DrawRectangle(suwakX, suwakY, suwakSzerokosc, 20, LIGHTGRAY);
+        DrawRectangle(suwakX + (glosnoscMuzyki / 50.0f) * suwakSzerokosc - 5, suwakY - 5, 10, 30, RED);
 
-        // Obliczenie pozycji wskaźnika suwaka
-        float wskaznikX = suwakX + (glosnoscMuzyki / 0.5f) * suwakSzerokosc;
-
-        // Rysowanie wskaźnika suwaka
-        DrawRectangle(wskaznikX - 5, suwakY - 5, 10, suwakWysokosc + 10, RED);
-
-        // Wyświetlenie wartości głośności w procentach
-        DrawText(TextFormat("%i%%", (int)(glosnoscMuzyki * 200)), suwakX + suwakSzerokosc + 20, suwakY, 20, WHITE);
-
+        // Wyświetlenie wartości głośności
+        DrawText(TextFormat("%i", (int)glosnoscMuzyki), suwakX + suwakSzerokosc + 100, suwakY - 5, 20, WHITE);
 
         if (rysujPrzycisk("Nastepny utwor", suwakX + suwakSzerokosc + 20, suwakY - 10, 200, 50, DARKGRAY, GRAY)) {
             if (!muzyka.empty()) {
@@ -893,6 +941,36 @@ void ustawieniaMenu()
     }
 }
 // Funkcje poziomów
+
+void generujzwyklaszachownice() {
+    string fenwgrze = poczatkowa_pozycja_fen;
+    inicjalizujSzachownice(fenwgrze);
+    bool wPoziomie = true;
+    zadanieRozwiazane = false;
+
+   
+
+    while (wPoziomie && !WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(kolorTla);
+        obslugaMuzyki();
+        obslugaRuchow2(fenwgrze);
+        narysujSzachowniceFEN(fenwgrze);
+        int margines = 20;
+        int szerokoscPola = 200;
+
+        if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY)) {
+            wPoziomie = false;
+        }
+
+        if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY)) {
+            ustawieniaMenu();
+        }
+
+        EndDrawing();
+    
+}
+}
 
 void poziom1() {
     Zadanie zadanie = wczytajZadanie("zadania/zadanie 1.txt");
@@ -1105,13 +1183,13 @@ void menuGlowne()
         }
         if (rysujPrzycisk("Graj lokalnie", szerokoscOkna / 2 - 150, wysokoscOkna / 2 - 175, 300, 75, DARKGRAY, GRAY))
         {
-            wWyborzePoziomow = true;
+            zwyklaszachownica = true;
         }
         if (rysujPrzycisk("Ustawienia", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 50, 200, 50, DARKGRAY, GRAY))
         {
             wUstawieniach = true;
         }
-        if (rysujPrzycisk("Tworcy", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 125 , 200, 50, DARKGRAY, GRAY))
+        if (rysujPrzycisk("Tworcy", szerokoscOkna / 2 - 100, wysokoscOkna / 2 + 125, 200, 50, DARKGRAY, GRAY))
         {
             wTworcach = true;
             //rysujTekstNaSrodku("Paweł Handwerkier", 30, DARKGRAY);
@@ -1123,10 +1201,16 @@ void menuGlowne()
 
         EndDrawing();
 
-        // Jeśli użytkownik wybrał opcję "Ustawienia", wywołujemy odpowiednią funkc        if (wUstawieniach)
+        // Jeśli użytkownik wybrał opcję "Ustawienia", wywołujemy odpowiednią funkcję
+        if (wUstawieniach)
         {
             ustawieniaMenu();  // Funkcja do wyświetlenia menu ustawień
             wUstawieniach = false; // Powrót do głównego menu po wyjściu z ustawień
+        }
+        if (zwyklaszachownica)
+        {
+            generujzwyklaszachownice();
+            zwyklaszachownica = false;
         }
         if (wWyborzePoziomow)
         {
