@@ -27,6 +27,7 @@ struct Ruch {
 };
 
 string poczatkowa_pozycja_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+string fenwgrze = poczatkowa_pozycja_fen;
 
 int szerokoscOkna = 1280;
 int wysokoscOkna = 720;
@@ -561,8 +562,46 @@ void obslugaRuchow(Zadanie& zadanie) {
         }
     }
 }
+/*
+vector<string> historiaRuchow;
 
-void obslugaRuchow2(string fen) {
+void resetujSzachownice() {
+    fenwgrze = "poczatkowa_pozycja_fen";
+    historiaRuchow.clear();
+    inicjalizujSzachownice(fenwgrze);
+}
+*/
+/*
+void dodajRuchDoHistorii(string ruch) {
+    historiaRuchow.push_back(ruch);
+}
+*/
+string konwertujNaPGN(int startX, int startY, int celX, int celY, char figura) {
+    string pgn = "";
+
+    if (figura == 'K' || figura == 'k') {
+        // Obsługa roszady
+        if (startX == 4 && celX == 6) return "O-O";   // Krótka roszada
+        if (startX == 4 && celX == 2) return "O-O-O"; // Długa roszada
+    }
+
+    // Figury inne niż piony dostają oznaczenie literowe (pion jest pusty)
+    if (toupper(figura) != 'P') {
+        pgn += toupper(figura); // Konwertujemy na dużą literę
+    }
+
+    // Dodajemy współrzędne
+    pgn += (char)('a' + startX);
+    pgn += to_string(8 - startY);
+    pgn += "-";
+    pgn += (char)('a' + celX);
+    pgn += to_string(8 - celY);
+
+    return pgn;
+}
+
+
+void obslugaRuchow2(string& fen) {  // Trzeba użyć referencji, żeby zmiany były widoczne
     int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8;
     int startX = (GetScreenWidth() - szerokoscSzachownicy) / 2;
     int startY = (GetScreenHeight() - szerokoscSzachownicy) / 2;
@@ -573,37 +612,28 @@ void obslugaRuchow2(string fen) {
         int x = (pozycjaMyszy.x - startX) / poleRozmiar;
         int y = (pozycjaMyszy.y - startY) / poleRozmiar;
 
-        if (x >= 0 && x < 8 && y >= 0 && y < 8) { // Kliknięcie w granicach szachownicy
+        if (x >= 0 && x < 8 && y >= 0 && y < 8) {
             if (!figuraZaznaczona) {
-                if (szachownica[y][x] != ' ') { // Zaznacz figurę
+                if (szachownica[y][x] != ' ') {
                     bool bialeFigura = isupper(szachownica[y][x]);
-                    if (czyBialeNaRuchu == bialeFigura) { // Sprawdzanie ruchu właściwego gracza
+                    if (czyBialeNaRuchu == bialeFigura) {
                         zaznaczonyX = x;
                         zaznaczonyY = y;
                         figuraZaznaczona = true;
-                        cout << "Zaznaczono figure: " << szachownica[y][x] << " na (" << x << ", " << y << ")" << endl;
-                    }
-                    else {
-                        cout << "Nie mozesz wykonac ruchu ta figura!" << endl;
                     }
                 }
             }
             else {
-                cout << "Proba ruchu z (" << zaznaczonyX << ", " << zaznaczonyY << ") na (" << x << ", " << y << ")" << endl;
                 if (czyRuchPoprawny(zaznaczonyX, zaznaczonyY, x, y)) {
+                    // Zapisanie ruchu w PGN-owym formacie
+                    string ruchPGN = konwertujNaPGN(zaznaczonyX, zaznaczonyY, x, y, szachownica[zaznaczonyY][zaznaczonyX]);
+                    //dodajRuchDoHistorii(ruchPGN);
+
                     szachownica[y][x] = szachownica[zaznaczonyY][zaznaczonyX];
                     szachownica[zaznaczonyY][zaznaczonyX] = ' ';
-                    fen = konwertujNaFEN(); // Aktualizuj FEN
-                    czyBialeNaRuchu = !czyBialeNaRuchu; // Zmiana tury
-                    ostatniStartX = zaznaczonyX;
-                    ostatniStartY = zaznaczonyY;
-                    ostatniCelX = x;
-                    ostatniCelY = y;
-                    cout << "Ruch wykonany. Nowy FEN: " << fen << endl;
+                    fen = konwertujNaFEN(); // Aktualizujemy FEN
+                    czyBialeNaRuchu = !czyBialeNaRuchu;
 
-                }
-                else {
-                    cout << "Niepoprawny ruch!" << endl;
                 }
                 figuraZaznaczona = false;
             }
@@ -942,35 +972,47 @@ void ustawieniaMenu()
 }
 // Funkcje poziomów
 
+/*
+void wyswietlHistorieRuchow() {
+    int margines = 20;
+    for (size_t i = 0; i < historiaRuchow.size(); ++i) {
+        DrawText(historiaRuchow[i].c_str(), margines + 10, 200 + i * 20, 16, WHITE);
+    }
+}
+*/
 void generujzwyklaszachownice() {
-    string fenwgrze = poczatkowa_pozycja_fen;
     inicjalizujSzachownice(fenwgrze);
     bool wPoziomie = true;
-    zadanieRozwiazane = false;
-
-   
 
     while (wPoziomie && !WindowShouldClose()) {
         BeginDrawing();
-        ClearBackground(kolorTla);
+        ClearBackground(DARKGRAY);
         obslugaMuzyki();
         obslugaRuchow2(fenwgrze);
         narysujSzachowniceFEN(fenwgrze);
-        int margines = 20;
-        int szerokoscPola = 200;
 
+        /*
+        DrawRectangle(20, 180, 200, 400, Fade(BLACK, 0.5f));
+        DrawRectangleLines(20, 180, 200, 400, WHITE);
+        DrawText("Historia ruchow:", 30, 190, 18, WHITE);
+        wyswietlHistorieRuchow();
+        */
+
+       /* if (rysujPrzycisk("Reset", 30, 600, 140, 40, DARKGRAY, GRAY)) {
+            resetujSzachownice();
+        }
+        */
         if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY)) {
             wPoziomie = false;
         }
-
         if (rysujPrzycisk("Ustawienia", GetScreenWidth() - 150, 60, 140, 40, DARKGRAY, GRAY)) {
             ustawieniaMenu();
         }
 
         EndDrawing();
-    
+    }
 }
-}
+
 
 void poziom1() {
     Zadanie zadanie = wczytajZadanie("zadania/zadanie 1.txt");
