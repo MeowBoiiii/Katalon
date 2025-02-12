@@ -6,7 +6,7 @@ Grafiki oraz wybrane dźwięki zostały zapożyczone ze strony internetowej ches
 Program stworzony w c++, używając biblioteki raylib
 >> Uruchamianie z pliku .exe
 
-Należy pobrać wszystkie pliki z githuba i je rozpakować do jednego folderu. Pliki dzielą się na dźwięki, grafiki oraz kods
+Należy pobrać wszystkie pliki z githuba i je rozpakować do jednego folderu. Pliki dzielą się na dźwięki, grafiki oraz kod
 
 Aby uruchomić program należy wejść w Projekcik -> x64 -> Debug i uruchomić plik projekckik.exe
 
@@ -38,9 +38,9 @@ raylib.lib
 I teraz program powinien się kompilować.
 
 
->> Koryzstanie z aplikacji:
+>> Korzystanie z aplikacji:
 
 Do korzystania z aplikacji wystarczy myszka. Po programie sterujemy używając lewego przycisku myszy.
 Wybieramy odpowiednie przyciski lub odpowiednie figury oraz pole, na które chcemy ją przesunąć.
 Poprawność rozwiązanego zadania widzimy od razu po wykonaniu ruchu.
-W pozycji możemy dowolnie przesuwać figury, zgodnie z zasadami szachów, aby przeanalizować pozycje.
+W pozycji możemy dowolnie przesuwać figury, zgodnie z zasadami szachów, aby przeanalizować pozycję.
