@@ -8,7 +8,7 @@ Program stworzony w c++, używając biblioteki raylib
 
 Należy pobrać wszystkie pliki z githuba i je rozpakować do jednego folderu. Pliki dzielą się na dźwięki, grafiki oraz kod
 
-Aby uruchomić program należy wejść w folder Projekcik i uruchomić plik projekckik.exe
+Aby uruchomić program należy wejść w folder Projekcik i uruchomić plik projekcik.exe
 
 
 
