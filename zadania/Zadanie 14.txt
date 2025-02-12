@@ -1,12 +1,13 @@
-rn1q1rk1/1bp2ppp/4p3/1p6/2pP1B2/5NP1/P1Q1PPBP/1R3RK1
-rn1q1rk1/1bp2ppp/4p3/1p4N1/2pP1B2/6P1/P1Q1PPBP/1R3RK1
-Zadanie 4
+r1b1r1k1/pp1nqppp/2pb4/8/2PpQ3/1P3NP1/PB3PBP/R2R2K1
+r1b1r1k1/pp1nqppp/2pb4/8/2PQ4/1P3NP1/PB3PBP/R2R2K1
+Zadanie 14
 BIALE
 
-Biale poswiecily pionka,
-aby zyskac aktywnosc.
-Czarne posiadaja wiecej
-figur na hetmanskim
+Czarne dopuscily do
+niebezpiecznego otwarcia
+centrum. Biale moga to
+wykorzystac, zdobywajac
+material
 
 -Znajdz najlepsze
 posuniecie dla bialego-

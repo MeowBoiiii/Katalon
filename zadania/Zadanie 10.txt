@@ -1,12 +1,13 @@
-r1q1rbk1/1b1n1ppp/p2P4/1pp4n/2p2B2/P1N2NPP/1PQ2PB1/3RR1K1
-r1q1Rbk1/1b1n1ppp/p2P4/1pp4n/2p2B2/P1N2NPP/1PQ2PB1/3R2K1
-Zadanie 6
+2rq1rk1/pp2b1p1/4p2p/5p2/3PpP2/1Q1nP1P1/PP3BBP/2R2RK1
+2rq1rk1/pp2b1p1/4Q2p/5p2/3PpP2/3nP1P1/PP3BBP/2R2RK1
+Zadanie 10
 BIALE
 
-Biale pozwoliły czarnym,
-zagrać b5 i wzmocnić c5.
-biale maja aktywność, a,
-czarne pionka przewagi
+Czarne mają slabosc
+w obronie królewskiej,
+a biale mogą przejac
+inicjatywe i zyskać
+przewage materialna
 
 -Znajdz najlepsze
 posuniecie dla bialego-

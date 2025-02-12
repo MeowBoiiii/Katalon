@@ -1,12 +1,13 @@
-rn1q1rk1/1bp2ppp/4p3/1p6/2pP1B2/5NP1/P1Q1PPBP/1R3RK1
-rn1q1rk1/1bp2ppp/4p3/1p4N1/2pP1B2/6P1/P1Q1PPBP/1R3RK1
-Zadanie 4
-BIALE
+r4rk1/p4p1p/1p2p3/2B2q2/4n1p1/5NP1/PPQ1PPKP/3R1R2
+r4rk1/p4p1p/1p2p3/2B2q2/4n3/5pP1/PPQ1PPKP/3R1R2
+Zadanie 8
+CZARNE
 
-Biale poswiecily pionka,
-aby zyskac aktywnosc.
-Czarne posiadaja wiecej
-figur na hetmanskim
+Biale atakuja
+w kierunku krolewskim,
+ale czarne moga
+sie obronic
+i zyskac przewage
 
 -Znajdz najlepsze
-posuniecie dla bialego-
+posuniecie dla czarnego-

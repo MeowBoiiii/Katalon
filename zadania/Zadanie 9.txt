@@ -1,12 +1,13 @@
-3rr1k1/pq1nbpp1/1p3n1p/2p3B1/2N5/4N1P1/PPQ2P1P/3RR1K1
-3rr1k1/pq1nbpp1/1p3n1p/2p2NB1/2N5/6P1/PPQ2P1P/3RR1K1
-Zadanie 5
-BIALE
+rnbq1rk1/1p2bppp/p3pn2/8/2QN4/6P1/PP2PPBP/RNBR2K1
+rnbq1rk1/1p2bppp/p4n2/4p3/2QN4/6P1/PP2PPBP/RNBR2K1
+Zadanie 9
+CZARNE
 
-Biale stracily pionka,
-w grze srodkowej.
-Czarne atakuja gońca,
-probujac uproscic pozycje
+Biale mają silna
+pozycje centralna,
+ale czarne moga
+zyskac przewage,
+atakujac w centrum
 
 -Znajdz najlepsze
-posuniecie dla bialego-
+posuniecie dla czarnego-

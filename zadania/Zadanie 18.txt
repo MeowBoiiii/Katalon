@@ -1,12 +1,12 @@
-rn1q1rk1/1bp2ppp/4p3/1p6/2pP1B2/5NP1/P1Q1PPBP/1R3RK1
-rn1q1rk1/1bp2ppp/4p3/1p4N1/2pP1B2/6P1/P1Q1PPBP/1R3RK1
-Zadanie 4
+r3r1k1/1p1q1pp1/p1p1pn1p/4b3/3P4/6P1/PPQ1PPBP/2RR2K1
+r3r1k1/1p1q1pp1/p1p1pn1p/4P3/8/6P1/PPQ1PPBP/2RR2K1
+Zadanie 18
 BIALE
 
-Biale poswiecily pionka,
-aby zyskac aktywnosc.
-Czarne posiadaja wiecej
-figur na hetmanskim
+Czarne zaniedbaly
+obrone, a ich ostatni
+ruch pozwolil bialym
+na zdobycie materialu
 
 -Znajdz najlepsze
 posuniecie dla bialego-

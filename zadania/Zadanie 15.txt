@@ -1,12 +1,13 @@
-3rr1k1/pq1nbpp1/1p3n1p/2p3B1/2N5/4N1P1/PPQ2P1P/3RR1K1
-3rr1k1/pq1nbpp1/1p3n1p/2p2NB1/2N5/6P1/PPQ2P1P/3RR1K1
-Zadanie 5
-BIALE
+r1b1k2r/p4ppp/2p1pn2/3p4/N2q4/4P1P1/PP1B1KBP/2RQ3R
+r1b1k2r/p4ppp/2p1p3/3p4/N2q2n1/4P1P1/PP1B1KBP/2RQ3R
+Zadanie 15
+CZARNE
 
-Biale stracily pionka,
-w grze srodkowej.
-Czarne atakuja gońca,
-probujac uproscic pozycje
+Biale maja aktywnie
+ustawione figury, ale
+czarne moga przejac
+inicjatywe i zdobyc
+material
 
 -Znajdz najlepsze
-posuniecie dla bialego-
+posuniecie dla czarnego-

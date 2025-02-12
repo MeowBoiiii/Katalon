@@ -1,12 +1,14 @@
-r1q1rbk1/1b1n1ppp/p2P4/1pp4n/2p2B2/P1N2NPP/1PQ2PB1/3RR1K1
-r1q1Rbk1/1b1n1ppp/p2P4/1pp4n/2p2B2/P1N2NPP/1PQ2PB1/3R2K1
-Zadanie 6
+2rqk2r/1b1nbpp1/p1p1p2p/1p1nP1N1/2pP4/5NPB/PPQ2P1P/R1BR2K1
+2rqk2r/1b1nbpp1/p1p1N2p/1p1nP3/2pP4/5NPB/PPQ2P1P/R1BR2K1
+Zadanie 16
 BIALE
 
-Biale pozwoliły czarnym,
-zagrać b5 i wzmocnić c5.
-biale maja aktywność, a,
-czarne pionka przewagi
+Czarne figury sa
+niezbyt dobrze
+zsynchronizowane,
+co pozwala białym
+na przeprowadzenie
+silnej taktyki
 
 -Znajdz najlepsze
 posuniecie dla bialego-

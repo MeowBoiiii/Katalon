@@ -1,11 +1,11 @@
 r2r2k1/p4ppp/1pQ5/8/1q6/6P1/P2NPP1P/3RK2R
 2rr2k1/p4ppp/1pQ5/8/1q6/6P1/P2NPP1P/3RK2R 
-Zadanie 7
+Zadanie 6
 CZARNE
 
-Biale pozwoliły czarnym,
-zagrać b5 i wzmocnić c5.
-biale maja aktywność, a,
+Biale pozwolily czarnym,
+zagrać b5 i wzmocnic c5.
+biale maja aktywnosc, a,
 czarne pionka przewagi
 
 -Znajdz najlepsze

@@ -1,12 +1,13 @@
-r1b2rk1/pppp1ppp/2n1pn2/8/3P4/1NQ2NP1/qP2PPBP/2R1K2R
-r1b2rk1/pppp1ppp/2n1pn2/8/3P4/1NQ2NP1/qP2PPBP/R3K2R
-Zadanie 1
+rnbq1rk1/ppp1bppp/8/3p2B1/3Pn3/2N3P1/PP2PPBP/R2QK1NR
+rnbq1rk1/ppp1Bppp/8/3p4/3Pn3/2N3P1/PP2PPBP/R2QK1NR
+Zadanie 11
 BIALE
 
-Czarne zbily pionka
-na skrzydle hetmanskim,
-jednak nie maja jeszcze
-wyprowadzonych figur
+Czarne pozwolily bialym
+na aktywne wykorzystanie
+swoich figur. Mozna zdobyc
+material, wykorzystujcc
+slabosci czarnych
 
 -Znajdz najlepsze
 posuniecie dla bialego-

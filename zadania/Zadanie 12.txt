@@ -1,9 +1,12 @@
-r4rk1/2pn1ppp/p1b1pq2/1p6/P1pP4/2P2NP1/Q3PPBP/R2R2K1 w
-r4rk1/2pn1ppp/p1b1pq2/1p2N3/P1pP4/2P3P1/Q3PPBP/R2R2K1
-Zadanie 2
-BIALE
+r5k1/pppq1ppp/2b5/4r3/2Q5/P1N3P1/1P2PP1P/2R1R1K1
+r5k1/ppp2ppp/2b5/4r3/2Q5/P1N3Pq/1P2PP1P/2R1R1K1
+Zadanie 12
+CZARNE
 
-Otwarta przekatna a8-h1
+Biale dopuscily do oslabienia
+krola, a czarne moga to
+wykorzystac, wchodzac
+z hetmanem do ataku
 
 -Znajdz najlepsze
-posuniecie dla bialego-
+posuniecie dla czarnego-

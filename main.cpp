@@ -8,6 +8,7 @@
 #include "raylib.h"
 #include <algorithm>
 
+
 using namespace std;
 
 const int ROZMIAR_SZACHOWNICY = 8;
@@ -17,6 +18,7 @@ const Color KOLOR_CIEMNY = DARKGRAY;
 Color kolorPolaJasny = LIGHTGRAY;
 Color kolorPolaCiemny = DARKGRAY;
 int zaznaczonyX = -1, zaznaczonyY = -1;
+bool czyObrocic = false;  // Domyślnie białe na dole
 bool figuraZaznaczona = false;
 float glosnoscMuzyki = 25.0f; // Domyślna głośność (0-100)
 // Reprezentacja szachownicy jako tablica 8x8
@@ -59,10 +61,10 @@ void odtworzDzwiek(const std::string& nazwaPliku) {
             // Poczekaj, aż dźwięk przestanie być odtwarzany
         }
         UnloadSound(dzwiek); // Zwolnienie zasobów po zakończeniu odtwarzania
-        cout << "Dźwięk odtworzony" << endl;
+        cout << "Dzwiek odtworzony" << endl;
     }
     else {
-        std::cerr << "Nie udało się załadować dźwięku: " << sciezkaDoPliku << std::endl;
+        std::cerr << "Nie udalo się załadowac dzwieku: " << sciezkaDoPliku << std::endl;
     }
 }
 
@@ -115,6 +117,18 @@ void rysujTekstNaSrodku(const char* tekst, int rozmiarCzcionki, Color kolor)
     EndDrawing();
 }
 
+
+void intro() {
+
+    rysujTekstNaSrodku("System Katalonski", 50, PINK);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    rysujTekstNaSrodku("System Katalonski", 50, PURPLE);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    rysujTekstNaSrodku("System Katalonski", 50, BLUE);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    rysujTekstNaSrodku("System Katalonski", 50, DARKGREEN);
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+}
 void ladujTeksturyFigur() {
     string folder = "grafiki_figur/";
     teksturyFigur['P'] = LoadTexture((folder + "wp.png").c_str());
@@ -331,12 +345,13 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
     }
     else if (figura == 'p') { // Czarny pionek
         if (cel == ' ' && celX == startX && celY == startY + 1) {
-            return true; // Ruch o jedno pole do przodu
             odtworzDzwiek("move-self.mp3");
+            return true; // Ruch o jedno pole do przodu
+            // tu był problem, bo po returnie był dźwięk, czyli go nie było
         }
         if (cel == ' ' && startY == 1 && celX == startX && celY == startY + 2 && szachownica[startY + 1][startX] == ' ') {
-            return true; // Ruch o dwa pola do przodu z pozycji startowej
             odtworzDzwiek("move-self.mp3");
+            return true; // Ruch o dwa pola do przodu z pozycji startowej
         }
         if (cel != ' ' && abs(celX - startX) == 1 && celY == startY + 1) {
             odtworzDzwiek("capture.mp3");
@@ -353,8 +368,6 @@ bool czyRuchPoprawny(int startX, int startY, int celX, int celY) {
             }
         }
     }
-
-
 
     // Ruchy skoczka
     else if (figura == 'N' || figura == 'n') {
@@ -517,7 +530,6 @@ void obslugaRuchow(Zadanie& zadanie) {
         Vector2 pozycjaMyszy = GetMousePosition();
         int x = (pozycjaMyszy.x - startX) / poleRozmiar;
         int y = (pozycjaMyszy.y - startY) / poleRozmiar;
-
         if (x >= 0 && x < 8 && y >= 0 && y < 8) { // Kliknięcie w granicach szachownicy
             if (!figuraZaznaczona) {
                 if (szachownica[y][x] != ' ') { // Zaznacz figurę
@@ -560,22 +572,24 @@ void obslugaRuchow(Zadanie& zadanie) {
                 figuraZaznaczona = false;
             }
         }
+
     }
 }
-/*
+
 vector<string> historiaRuchow;
 
-void resetujSzachownice() {
-    fenwgrze = "poczatkowa_pozycja_fen";
+
+/*void resetujSzachownice() {
+    fenwgrze = poczatkowa_pozycja_fen;
     historiaRuchow.clear();
-    inicjalizujSzachownice(fenwgrze);
+    czyBialeNaRuchu = true;
 }
 */
-/*
+
 void dodajRuchDoHistorii(string ruch) {
     historiaRuchow.push_back(ruch);
 }
-*/
+
 string konwertujNaPGN(int startX, int startY, int celX, int celY, char figura) {
     string pgn = "";
 
@@ -601,7 +615,7 @@ string konwertujNaPGN(int startX, int startY, int celX, int celY, char figura) {
 }
 
 
-void obslugaRuchow2(string& fen) {  // Trzeba użyć referencji, żeby zmiany były widoczne
+void obslugaRuchow2(string& fen) {
     int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8;
     int startX = (GetScreenWidth() - szerokoscSzachownicy) / 2;
     int startY = (GetScreenHeight() - szerokoscSzachownicy) / 2;
@@ -613,6 +627,12 @@ void obslugaRuchow2(string& fen) {  // Trzeba użyć referencji, żeby zmiany by
         int y = (pozycjaMyszy.y - startY) / poleRozmiar;
 
         if (x >= 0 && x < 8 && y >= 0 && y < 8) {
+            // 🔄 Odwrócenie współrzędnych jeśli czarne są na dole
+            if (czyObrocic) {
+                x = 7 - x;
+                y = 7 - y;
+            }
+
             if (!figuraZaznaczona) {
                 if (szachownica[y][x] != ' ') {
                     bool bialeFigura = isupper(szachownica[y][x]);
@@ -625,21 +645,23 @@ void obslugaRuchow2(string& fen) {  // Trzeba użyć referencji, żeby zmiany by
             }
             else {
                 if (czyRuchPoprawny(zaznaczonyX, zaznaczonyY, x, y)) {
-                    // Zapisanie ruchu w PGN-owym formacie
                     string ruchPGN = konwertujNaPGN(zaznaczonyX, zaznaczonyY, x, y, szachownica[zaznaczonyY][zaznaczonyX]);
-                    //dodajRuchDoHistorii(ruchPGN);
+                    dodajRuchDoHistorii(ruchPGN);
 
                     szachownica[y][x] = szachownica[zaznaczonyY][zaznaczonyX];
                     szachownica[zaznaczonyY][zaznaczonyX] = ' ';
-                    fen = konwertujNaFEN(); // Aktualizujemy FEN
+                    fen = konwertujNaFEN();
                     czyBialeNaRuchu = !czyBialeNaRuchu;
 
+                    // 🔄 Po ruchu aktualizujemy orientację szachownicy
+                    czyObrocic = !czyObrocic;
                 }
                 figuraZaznaczona = false;
             }
         }
     }
 }
+
 
 
 
@@ -685,6 +707,56 @@ void narysujSzachowniceFEN(const string& fen) {
         }
     }
 }
+
+
+void narysujSzachowniceFEN2(const string& fen, bool czyObrocic) {
+    int szerokoscSzachownicy = min(GetScreenHeight(), GetScreenWidth()) * 0.8;
+    int startX = (GetScreenWidth() - szerokoscSzachownicy) / 2;
+    int startY = (GetScreenHeight() - szerokoscSzachownicy) / 2;
+    int poleRozmiar = szerokoscSzachownicy / ROZMIAR_SZACHOWNICY;
+
+    for (int y = 0; y < ROZMIAR_SZACHOWNICY; y++) {
+        for (int x = 0; x < ROZMIAR_SZACHOWNICY; x++) {
+            int rysujX = czyObrocic ? (7 - x) : x;
+            int rysujY = czyObrocic ? (7 - y) : y;
+
+            Color kolorPola = ((x + y) % 2 == 0) ? kolorPolaJasny : kolorPolaCiemny;
+            DrawRectangle(startX + rysujX * poleRozmiar, startY + rysujY * poleRozmiar, poleRozmiar, poleRozmiar, kolorPola);
+        }
+    }
+
+    if (figuraZaznaczona) {
+        int zaznaczonePoleX = startX + (czyObrocic ? (7 - zaznaczonyX) : zaznaczonyX) * poleRozmiar;
+        int zaznaczonePoleY = startY + (czyObrocic ? (7 - zaznaczonyY) : zaznaczonyY) * poleRozmiar;
+        int gruboscObrysu = 4;
+        DrawRectangleLinesEx(
+            { static_cast<float>(zaznaczonePoleX), static_cast<float>(zaznaczonePoleY),
+              static_cast<float>(poleRozmiar), static_cast<float>(poleRozmiar) },
+            gruboscObrysu, RED
+        );
+    }
+
+    int x = 0, y = 0;
+    for (char c : fen) {
+        if (c == ' ') break;
+        if (c == '/') {
+            y++;
+            x = 0;
+        }
+        else if (isdigit(c)) {
+            x += c - '0';
+        }
+        else {
+            int rysujX = czyObrocic ? (7 - x) : x;
+            int rysujY = czyObrocic ? (7 - y) : y;
+            rysujFigure(c, rysujX, rysujY, startX, startY, poleRozmiar);
+            x++;
+        }
+    }
+}
+
+
+
 
 // Funkcja do inicjalizacji szachownicy na podstawie FEN
 void inicjalizujSzachownice(const string& fen) {
@@ -972,36 +1044,102 @@ void ustawieniaMenu()
 }
 // Funkcje poziomów
 
-/*
+int przesuniecieHistorii = 0;
+
 void wyswietlHistorieRuchow() {
     int margines = 20;
-    for (size_t i = 0; i < historiaRuchow.size(); ++i) {
-        DrawText(historiaRuchow[i].c_str(), margines + 10, 200 + i * 20, 16, WHITE);
+    int maxWysokosc = 300;
+    int wyswietlaneRuchy = maxWysokosc / 20 - 2;
+
+    przesuniecieHistorii = std::max(0, std::min(przesuniecieHistorii, static_cast<int>(historiaRuchow.size()) - wyswietlaneRuchy));
+
+    for (size_t i = przesuniecieHistorii; i < historiaRuchow.size() && i < przesuniecieHistorii + wyswietlaneRuchy; i += 2) {
+
+        string ruchBialego = historiaRuchow[i];
+        DrawText(ruchBialego.c_str(), margines + 10, 210 + ((i - przesuniecieHistorii) / 2) * 20, 16, WHITE);
+
+        if (i + 1 < historiaRuchow.size()) {
+            string ruchCzarnego = historiaRuchow[i + 1];
+            DrawText(ruchCzarnego.c_str(), margines + 110, 210 + ((i - przesuniecieHistorii) / 2) * 20, 16, WHITE);
+        }
     }
+
+    DrawRectangle(20, 180, 200, maxWysokosc, Fade(BLACK, 0.5f));
+    DrawRectangleLines(20, 180, 200, maxWysokosc, WHITE);
+    DrawText("Historia ruchow:", 30, 190, 18, WHITE);
 }
-*/
+
+
+
+
+void obslugaPrzewijaniaHistorii() {
+    // Wysokość okna historii
+    int maxWysokosc = 300;  // Wysokość okna z historią
+    int margines = 20;
+
+    // Obliczamy liczbę wyświetlanych ruchów (wysokość okna / wysokość pojedynczego ruchu)
+    int wyswietlaneRuchy = maxWysokosc / 20 - 2; // Można zmienić na bardziej dopasowane wartości
+
+    // Rysowanie przycisku "W górę"
+    if (rysujPrzycisk("W gore", 20, 180 + maxWysokosc + 10, 200, 40, DARKGRAY, GRAY)) {
+        przesuniecieHistorii -= wyswietlaneRuchy;  // Przewijanie w górę o jedną stronę
+    }
+
+    // Rysowanie przycisku "W dół"
+    if (rysujPrzycisk("W dol", 20, 180 + maxWysokosc + 50, 200, 40, DARKGRAY, GRAY)) {
+        przesuniecieHistorii += wyswietlaneRuchy;  // Przewijanie w dół o jedną stronę
+    }
+
+    // Zapewnienie, że nie wyjdziemy poza dostępne dane
+    int maxWyswietlanychRuchow = 300 / 20;  // Liczba wyświetlanych ruchów (wysokość okna / wysokość pojedynczego ruchu)
+    int maxPrzesuniecie = historiaRuchow.size() - maxWyswietlanychRuchow;
+    przesuniecieHistorii = std::max(0, std::min(przesuniecieHistorii, maxPrzesuniecie));
+}
+
+
+
+
+
+
+
 void generujzwyklaszachownice() {
     inicjalizujSzachownice(fenwgrze);
     bool wPoziomie = true;
 
     while (wPoziomie && !WindowShouldClose()) {
         BeginDrawing();
-        ClearBackground(DARKGRAY);
+        ClearBackground(kolorTla);
         obslugaMuzyki();
         obslugaRuchow2(fenwgrze);
-        narysujSzachowniceFEN(fenwgrze);
+        czyObrocic = !czyBialeNaRuchu; // Czarny na ruchu = obracamy szachownicę
+        narysujSzachowniceFEN2(fenwgrze, czyObrocic);
 
-        /*
-        DrawRectangle(20, 180, 200, 400, Fade(BLACK, 0.5f));
-        DrawRectangleLines(20, 180, 200, 400, WHITE);
-        DrawText("Historia ruchow:", 30, 190, 18, WHITE);
+        
+        obslugaPrzewijaniaHistorii();
+
+        // Obsługa przycisków i przewijania historii
+        obslugaPrzewijaniaHistorii();
+
+        // Wyświetlanie historii ruchów
         wyswietlHistorieRuchow();
-        */
+        
 
-       /* if (rysujPrzycisk("Reset", 30, 600, 140, 40, DARKGRAY, GRAY)) {
-            resetujSzachownice();
+        if (rysujPrzycisk("Reset", 30, 600, 140, 40, DARKGRAY, GRAY)) {
+            // Resetowanie FEN do początkowej pozycji
+            fenwgrze = poczatkowa_pozycja_fen;  // Ustawienie początkowego FEN
+
+            // Resetowanie historii ruchów
+            historiaRuchow.clear();
+
+            // Resetowanie zmiennych związanych z grą
+            czyBialeNaRuchu = true;
+            figuraZaznaczona = false;
+            zaznaczonyX = -1;
+            zaznaczonyY = -1;
+            inicjalizujSzachownice(fenwgrze);
         }
-        */
+
+        
         if (rysujPrzycisk("Powrot", GetScreenWidth() - 150, 10, 140, 40, DARKGRAY, GRAY)) {
             wPoziomie = false;
         }
@@ -1278,15 +1416,10 @@ int main()
 {
     InitWindow(szerokoscOkna, wysokoscOkna, "Szachy C++");
     SetTargetFPS(60);
-
+    intro();
     ladujTeksturyFigur();
     InitAudioDevice();
     ladujMuzyke();
-
-    /*   Music muzyka = LoadMusicStream("muzyka/muzyka1.ogg");
-       PlayMusicStream(muzyka);
-       muzyka.looping = true;
-       */
 
     menuGlowne();
 
