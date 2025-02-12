@@ -3,12 +3,12 @@ Program służy jako pomoc do poprawienia swojego poziomu gry w szachach, skupia
 Składa się z wybranych zadań szachowych, które użytkownik ma za zadanie rozwiązać.
 Autorem programu jest Handwerkier Paweł. Program został zrealizowany w ramach przedmiotu "Projekt C" prowadzonego przez Doktora Juszczaka Cezarego.
 Grafiki oraz wybrane dźwięki zostały zapożyczone ze strony internetowej chess.com.
-Program stworzony w c++, używając biblioteki raylib
+Program stworzony w c++, używając biblioteki raylib i docelowo jest na system Windows
 >> Uruchamianie z pliku .exe
 
 Należy pobrać wszystkie pliki z githuba i je rozpakować do jednego folderu. Pliki dzielą się na dźwięki, grafiki oraz kod
 
-Aby uruchomić program należy wejść w folder Projekcik i uruchomić plik projekckik.exe
+Aby uruchomić program należy wejść w folder Projekcik i uruchomić plik projekcik.exe
 
 
 
